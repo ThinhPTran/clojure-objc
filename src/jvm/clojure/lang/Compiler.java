@@ -1246,10 +1246,18 @@ public class Compiler implements Opcodes {
       this.column = column;
       this.tag = tag;
       if (field == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref())) {
-        RT.errPrintWriter()
-            .format(
-                "Reflection warning, %s:%d:%d - reference to field %s can't be resolved.\n",
-                SOURCE_PATH.deref(), line, column, fieldName);
+        if (targetClass == null) {
+          RT.errPrintWriter()
+              .format(
+                  "Reflection warning, %s:%d:%d - reference to field %s can't be resolved.\n",
+                  SOURCE_PATH.deref(), line, column, fieldName);
+        } else {
+          RT.errPrintWriter()
+              .format(
+                  "Reflection warning, %s:%d:%d - reference to field %s on %s can't be resolved.\n",
+                  SOURCE_PATH.deref(), line, column, fieldName,
+                  targetClass.getName());
+        }
       }
     }
 
@@ -1568,49 +1576,52 @@ public class Compiler implements Opcodes {
       this.methodName = methodName;
       this.target = target;
       this.tag = tag;
-        List methods = Reflector.getMethods(target.hasJavaClass() && target.getJavaClass() != null ? target.getJavaClass() : Object.class,
-            args.count(), methodName, false);
-        if (methods.isEmpty())
-          method = null;
-        else {
-          int methodidx = 0;
-          if (methods.size() > 1) {
-            ArrayList<Class[]> params = new ArrayList();
-            ArrayList<Class> rets = new ArrayList();
-            for (int i = 0; i < methods.size(); i++) {
-              java.lang.reflect.Method m = (java.lang.reflect.Method) methods
-                  .get(i);
-              params.add(m.getParameterTypes());
-              rets.add(m.getReturnType());
-            }
-            methodidx = getMatchingParams(methodName, params, args, rets);
+      List methods = Reflector.getMethods(
+          target.hasJavaClass() && target.getJavaClass() != null ? target
+              .getJavaClass() : Object.class, args.count(), methodName, false);
+      if (methods.isEmpty())
+        method = null;
+      else {
+        int methodidx = 0;
+        if (methods.size() > 1) {
+          ArrayList<Class[]> params = new ArrayList();
+          ArrayList<Class> rets = new ArrayList();
+          for (int i = 0; i < methods.size(); i++) {
+            java.lang.reflect.Method m = (java.lang.reflect.Method) methods
+                .get(i);
+            params.add(m.getParameterTypes());
+            rets.add(m.getReturnType());
           }
-          java.lang.reflect.Method m = (java.lang.reflect.Method) (methodidx >= 0 ? methods
-              .get(methodidx) : null);
+          methodidx = getMatchingParams(methodName, params, args, rets);
+        }
+        java.lang.reflect.Method m = (java.lang.reflect.Method) (methodidx >= 0 ? methods
+            .get(methodidx) : null);
 
-          if (m != null) {
-            ObjMethod objm = (ObjMethod) METHOD.get();
-            if (objm != null && !objm.hasException) {
-              for (Class ex : m.getExceptionTypes()) {
-                if (!RuntimeException.class.isAssignableFrom(ex)) {
-                  objm.hasException = true;
-                  break;
-                }
+        if (m != null) {
+          ObjMethod objm = (ObjMethod) METHOD.get();
+          if (objm != null && !objm.hasException) {
+            for (Class ex : m.getExceptionTypes()) {
+              if (!RuntimeException.class.isAssignableFrom(ex)) {
+                objm.hasException = true;
+                break;
               }
             }
           }
-          if (m != null
-              && !Modifier.isPublic(m.getDeclaringClass().getModifiers())) {
-            // public method of non-public class, try to find it in hierarchy
-            m = Reflector.getAsMethodOfPublicBase(m.getDeclaringClass(), m);
-          }
-          method = m;
         }
+        if (m != null
+            && !Modifier.isPublic(m.getDeclaringClass().getModifiers())) {
+          // public method of non-public class, try to find it in hierarchy
+          m = Reflector.getAsMethodOfPublicBase(m.getDeclaringClass(), m);
+        }
+        method = m;
+      }
 
       if (method == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref())) {
-        RT.errPrintWriter().format(
-            "Reflection warning, %s:%d:%d - call to %s can't be resolved.\n",
-            SOURCE_PATH.deref(), line, column, methodName);
+        RT.errPrintWriter()
+            .format(
+                "Reflection warning, %s:%d:%d - call to method %s on %s can't be resolved (argument types: %s).\n",
+                SOURCE_PATH.deref(), line, column, methodName,
+                target.getJavaClass().getName(), getTypeStringForArgs(args));
       }
     }
 
@@ -1786,9 +1797,11 @@ public class Compiler implements Opcodes {
       }
 
       if (method == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref())) {
-        RT.errPrintWriter().format(
-            "Reflection warning, %s:%d:%d - call to %s can't be resolved.\n",
-            SOURCE_PATH.deref(), line, column, methodName);
+        RT.errPrintWriter()
+            .format(
+                "Reflection warning, %s:%d:%d - call to static method %s on %s can't be resolved (argument types: %s).\n",
+                SOURCE_PATH.deref(), line, column, methodName, c.getName(),
+                getTypeStringForArgs(args));
       }
     }
 
@@ -3121,6 +3134,17 @@ public class Compiler implements Opcodes {
     }
     // Keep everything after the last match
     sb.append(mungedName.substring(lastMatchEnd));
+    return sb.toString();
+  }
+
+  static String getTypeStringForArgs(IPersistentVector args) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < args.count(); i++) {
+      Expr arg = (Expr) args.nth(i);
+      if (i > 0)
+        sb.append(", ");
+      sb.append(arg.hasJavaClass() ? arg.getJavaClass().getName() : "unknown");
+    }
     return sb.toString();
   }
 
