@@ -14,6 +14,7 @@
 #import "clojure/lang/ObjC.h"
 #import "clojure/lang/Selector.h"
 #import "Cst502Socket.h"
+#import <UIKit/UIKit.h>
 
 @implementation NSSocketImpl {
     Cst502ClientSocket* cs;
@@ -26,17 +27,26 @@
         buf = malloc(4096);
         cs = [[Cst502ClientSocket alloc] initWithHost: hostName
                                            portNumber: portNum];
-        if(![cs connect]){
-            [self release];
-            return nil;
-        }
+        [self reconnect];
     }
     return self;
+}
+
+- (void) reconnect {
+    while(![cs connect]) {
+        NSLog(@"Error connecting... will try again in 5 second");
+        [NSThread sleepForTimeInterval:5];
+    }
 }
 
 - (id) read {
     fflush (stdout);
     id a = [cs receiveBytes: buf maxBytes:MAXDATASIZE beginAt:0];
+    if ([@"" isEqualToString:a]) {
+        [self reconnect];
+        return [self read];
+    }
+    NSLog(@"%@", a);
     return a;
 }
 

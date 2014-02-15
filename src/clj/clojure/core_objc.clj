@@ -57,10 +57,10 @@
   (let [t (first args)
         args (vec (next args))
         has-params (even? (count args))
-        args (partition 2 (if has-params args (conj args nil)))
-        params (mapv second args)
-        selector (str (subs (apply str (map first args)) 1) (if has-params ":" ""))]
-    `($ ($ NSCommon) :invokeSuperSel ~t :withSelector ~selector :withArgs ~args)))
+        args (if has-params (partition 2 args) args)
+        params (if has-params (mapv second args) [])
+        selector (if has-params (str (subs (apply str (map first args)) 1) ":") (name (first args)))]
+    `($ ($ NSCommon) :invokeSuperSel ~t :withSelector ~selector :withArgs ~params)))
 
 (def objc-types
   {:void \v
