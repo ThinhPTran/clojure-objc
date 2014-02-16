@@ -46,7 +46,6 @@
         [self reconnect];
         return [self read];
     }
-    NSLog(@"%@", a);
     return a;
 }
 

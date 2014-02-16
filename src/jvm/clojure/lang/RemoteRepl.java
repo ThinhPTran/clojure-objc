@@ -20,14 +20,29 @@ public class RemoteRepl {
 
   public static void setConnected(boolean connected) {
     RemoteRepl.connected = connected;
+    RemoteRef.reset();
   }
   
-  public static void listen() {
+  public static void listen(int port) {
+    connect(null, port);
+  }
+  
+  public static void connect(String host, int port) {
     try {
       RT.load("clojure/remoterepl");
-      lister.invoke();
+      lister.invoke(host, port);
     } catch (Exception e) {
       throw Util.sneakyThrow(e);
     }
   }
+  
+  public static native Object safetry(AFn fn) /*-[
+    @try {
+      return [fn invoke];
+    } 
+    @catch (NSException *exception) {
+      NSLog(@"%@", [exception callStackSymbols]);
+      return nil;
+    }
+  ]-*/;
 }

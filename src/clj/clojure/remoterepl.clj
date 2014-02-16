@@ -3,53 +3,38 @@
            [clojure.lang LineNumberingPushbackReader]
            [java.io PrintWriter InputStreamReader OutputStreamWriter]))
 
-(def pending (atom (clojure.lang.PersistentQueue/EMPTY)))
-
-(defn dequeue! [queue]
-  (loop []
-    (let [q @queue
-          value (peek q)
-          nq (pop q)]
-      (if (compare-and-set! queue q nq)
-        value
-        (recur)))))
-
-(def in-call-remote (atom false))
-
-(def port 4815)
-
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
-(defmacro with-socket [[port in out] & body]
-  `(loop []
-     (let [s# (.accept (ServerSocket. ~port))
-           ~out (PrintWriter. (.getOutputStream s#) true)
-          ~in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s#)))]
-       (future
-         ~@body))
-     (recur)))
+(def work (atom []))
 
 (def repl (atom nil))
 
 (def responses (atom {}))
 
-(defn do-pending [f]
+(defn safe-apply [f args]
+  (if objc?
+    (clojure.lang.RemoteRepl/safetry (fn [] (apply f args)))
+    (try (apply f args) (catch Exception e (.printStackTrace e)))))
+
+(defn process-msg [f]
   (if (= 2 (count f))
     (let [[id r] f]
       (swap! responses assoc id r))
-    (let [[id f args] f]
+    (let [[id f args] f
+          r (safe-apply f args)]
       (if objc?
-        ($ @repl :println (pr-str [id (apply f args)]))
-        (future (.println @repl (pr-str [id (apply f args)])))))))
+        ($ @repl :println (pr-str [id r]))
+        (.println @repl (pr-str [id r]))))))
 
-(defn do-pendings []
-  (loop [p (dequeue! pending)]
-    (when p
-      (do-pending p)
-      (recur (dequeue! pending)))))
+(defn do-work []
+  (let [w @work]
+    (reset! work [])
+    (doall (map process-msg w))))
+
+(def in-call-remote (atom 0))
 
 (defn call-remote [sel args]
-  (reset! in-call-remote true)
+  (swap! in-call-remote inc)
   (let [args (vec args)
         id (keyword (uuid))
         msg (pr-str [id sel args])]
@@ -60,36 +45,55 @@
       (if (some #{id} (keys @responses))
         (let [r (id @responses)]
           (swap! responses dissoc id)
-          (reset! in-call-remote false)
+          (swap! in-call-remote dec)
           r)
         (do
           (Thread/sleep 10)
-          (when objc?
-            (do-pendings))
+          (do-work)
           (recur))))))
 
-(defn listen-objc []
+(defn listen-objc [host port]
   (let [s ($ ($ ($ NSSocketImpl) :alloc)
-             :initWithHost "localhost"
+             :initWithHost host
              :withPort (str port))]
+    (clojure.lang.RemoteRepl/setConnected true)
+    (println "Remote repl connected to" host ":" port)
     (reset! repl s)
     (loop [f ($ s :read)]
-      (swap! pending conj (read-string f))
-      (when-not @in-call-remote
-        (dispatch-main (do-pendings)))
+      (swap! work conj (read-string f))
       (recur ($ s :read)))))
 
-(defn listen-jvm []
-  (with-socket [port in out]
-    (reset! repl out)
-    (loop [f (read in)]
-      (swap! pending conj f)
-      (do-pendings)
-      (recur (read in)))))
+(defn listen-jvm [port]
+  (let [server (ServerSocket. port)]
+    (println "Remote repl listening on port" port)
+    (loop []
+      (let [s (.accept server)
+            out (PrintWriter. (.getOutputStream s) true)
+            in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
+        (future
+          (clojure.lang.RemoteRepl/setConnected true)
+          (println "Client has connected!")
+          (try
+            (reset! repl out)
+            (loop [f (read in)]
+              (swap! work conj f)
+              (recur (read in)))
+            (catch Exception e
+              (.printStackTrace e)))))
+      (recur))))
 
-(defn listen []
-  (clojure.lang.RemoteRepl/setConnected true)
-  (future
-    (if objc?
-      (listen-objc)
-      (listen-jvm))))
+(defn listen
+  ([port] (listen nil port))
+  ([host port]
+      (future
+        (if objc?
+          (listen-objc host port)
+          (listen-jvm port)))
+      (future
+        (loop []
+          (when (zero? @in-call-remote)
+            (if objc?
+              (dispatch-main (do-work))
+              (future (do-work))))
+          (Thread/sleep 10)
+          (recur)))))

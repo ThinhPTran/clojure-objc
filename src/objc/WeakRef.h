@@ -14,4 +14,8 @@
 
 -(id)deref;
 
++(WeakRef*)from:(id)o;
+
+-(BOOL)isEqual:(id)f;
+
 @end

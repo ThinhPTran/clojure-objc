@@ -80,7 +80,7 @@ public class MultiFn extends AFn {
   public MultiFn preferMethod(Object dispatchValX, Object dispatchValY) {
     rw.writeLock().lock();
     try {
-      // TODO: allow this in ios? 
+      // TODO: allow this in ios?
       // This is very slow in objc runtime
       if (!ObjC.objc && prefers(dispatchValY, dispatchValX))
         throw new IllegalStateException(
@@ -100,10 +100,20 @@ public class MultiFn extends AFn {
   }
 
   private boolean prefers(Object x, Object y) {
+    if ("class JavaObject".equals(String.valueOf(x))
+        || "class java.lang.Object".equals(String.valueOf(x))
+        || "class JavaObject".equals(String.valueOf(y))
+        || "class java.lang.Object".equals(String.valueOf(y))) {
+      return false;
+    }
+    
+    if (x == y)
+      return false;
+
     IPersistentSet xprefs = (IPersistentSet) getPreferTable().valAt(x);
     if (xprefs != null && xprefs.contains(y))
       return true;
-    
+
     for (ISeq ps = RT.seq(parents.invoke(y)); ps != null; ps = ps.next()) {
       if (prefers(x, ps.first()))
         return true;
@@ -119,6 +129,9 @@ public class MultiFn extends AFn {
     // in objc not all classes extend java.lang.Object
     if (x instanceof Class && y == Object.class) {
       return true;
+    }
+    if (x instanceof Class && y instanceof Class) {
+      return ((Class) y).isAssignableFrom((Class) x);
     }
     return RT.booleanCast(isa.invoke(hierarchy.deref(), x, y));
   }

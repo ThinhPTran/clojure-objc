@@ -219,8 +219,10 @@ IMP getDispatch(char c) {
                                     withId:name withId:m];
     Class superc = NSClassFromString(s);
     Class clazz = objc_allocateClassPair(superc, [name UTF8String], 0);
+    BOOL wasDefined = NO;
     if (clazz == nil) {
-        @throw [[JavaLangRuntimeException alloc] initWithNSString:[@"Class already exists: " stringByAppendingString:name]];
+        wasDefined = YES;
+        clazz = NSClassFromString(name);
     }
     id seq = [m seq];
     while (seq != nil) {
@@ -247,7 +249,9 @@ IMP getDispatch(char c) {
         seq = [ClojureLangRT nextWithId:seq];
     }
     
-    objc_registerClassPair(clazz);
+    if (!wasDefined) {
+        objc_registerClassPair(clazz);
+    }
     return clazz;
 }
 

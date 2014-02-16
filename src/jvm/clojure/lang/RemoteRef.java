@@ -11,6 +11,11 @@ public class RemoteRef extends RestFn {
 
   private static Var gensym = RT.var("clojure.core", "gensym");
 
+  public static void reset() {
+    a.reset(RT.map());
+    i.reset(RT.map());
+  }
+  
   public static Object register(final Object o) {
     IPersistentMap lookup = (IPersistentMap) i.deref();
     Object curr = lookup.valAt(o);

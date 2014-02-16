@@ -521,7 +521,7 @@ BOOL use_stret(id object, NSString* selector) {
     id retType = [ClojureLangRT firstWithId: types];
     types = [ClojureLangRT nextWithId:types];
     id args = [ClojureLangPersistentVector EMPTY];
-    args = [conj invokeWithId:args withId:[[[WeakRef alloc] initWith:sself] autorelease]];
+    args = [conj invokeWithId:args withId:[WeakRef from:sself]];
     for (int n = 0; n < [ClojureLangRT countFromWithId:types]; n++) {
         id val = nil;
         int j = n + 2;

@@ -163,7 +163,7 @@ void *get_in_addr(struct sockaddr *sa){
 #else
          inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
                    s, sizeof s);
-         printf("client failed to connect to %s\n", s);
+//         printf("client failed to connect to %s\n", s);
 #endif
          //perror("client error connecting");
          connected = NO;
@@ -172,7 +172,7 @@ void *get_in_addr(struct sockaddr *sa){
       break;
    }
    if (p == NULL) {
-      printf("client failed to connect\n");
+ //     printf("client failed to connect\n");
       connected = NO;
    }else{
 #if defined(WINGS)
@@ -180,7 +180,7 @@ void *get_in_addr(struct sockaddr *sa){
 #else
       inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
                 s, sizeof s);
-      printf("client connected to %s\n", s);
+      //printf("client connected to %s\n", s);
 #endif
       connected = YES;
    }

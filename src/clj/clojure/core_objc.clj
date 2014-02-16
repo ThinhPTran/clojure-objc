@@ -263,5 +263,6 @@
 
 (defn remote-repl
   "Starts a remote repl"
-  []
-  (clojure.lang.RemoteRepl/listen))
+  ([] (remote-repl 35813))
+  ([port]
+     (clojure.lang.RemoteRepl/listen port)))

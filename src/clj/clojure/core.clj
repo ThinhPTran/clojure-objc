@@ -5878,10 +5878,8 @@
           (swap! mem assoc args ret)
           ret)))))
 
-; Notable speed increase on objc runtime
-; TODO ?
-;(def parents (memoize parents))
-;(def bases (memoize bases))
+(def supers (memoize supers))
+(def bases (memoize bases))
 
 (defmacro condp
   "Takes a binary predicate, an expression, and a set of clauses.
