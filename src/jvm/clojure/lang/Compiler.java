@@ -9478,6 +9478,8 @@ public class Compiler implements Opcodes {
           : Object.class;
       if (retClass != void.class) {
         v = "return " + unboxVal(retClass, v);
+      } else {
+        v = "return";
       }
     }
     return v + (C.EXPRESSION != context ? ";" : "");
