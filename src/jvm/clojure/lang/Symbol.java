@@ -81,10 +81,9 @@ public boolean equals(Object o) {
 
   // identity compares intended, names are interned
   boolean r = name == symbol.name && ns == symbol.ns;
-  // fix for objc
-  if (!r) {
+  if (!r && ObjC.objc) {
     if (ns == null) {
-      return name.equals(symbol.name);
+      return name.equals(symbol.name) && symbol.ns == null;
     } else {
       return name.equals(symbol.name) && ns.equals(symbol.name);
     }
