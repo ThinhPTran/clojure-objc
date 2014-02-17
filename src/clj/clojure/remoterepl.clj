@@ -33,6 +33,13 @@
 
 (def in-call-remote (atom 0))
 
+(add-watch work :worker
+           (fn [k r o n]
+             (when (and (zero? @in-call-remote) (not (empty? n)))
+               (if objc?
+                 (dispatch-main (do-work))
+                 (future (do-work))))))
+
 (defn call-remote [sel args]
   (swap! in-call-remote inc)
   (let [args (vec args)
@@ -88,12 +95,4 @@
       (future
         (if objc?
           (listen-objc host port)
-          (listen-jvm port)))
-      (future
-        (loop []
-          (when (zero? @in-call-remote)
-            (if objc?
-              (dispatch-main (do-work))
-              (future (do-work))))
-          (Thread/sleep 10)
-          (recur)))))
+          (listen-jvm port)))))

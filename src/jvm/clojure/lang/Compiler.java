@@ -22,6 +22,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.TypeVariable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -8195,6 +8197,7 @@ public class Compiler implements Opcodes {
       Map[] mc = gatherMethods(superClass, RT.seq(interfaces));
       Map overrideables = mc[0];
       Map covariants = mc[1];
+      Map parameters = mc[2];
       ret.mmap = overrideables;
       ret.covariants = covariants;
       Map allmethods = new HashMap(overrideables);
@@ -8225,7 +8228,7 @@ public class Compiler implements Opcodes {
         IPersistentCollection methods = null;
         for (ISeq s = methodForms; s != null; s = RT.next(s)) {
           NewInstanceMethod m = NewInstanceMethod.parse(ret,
-              (ISeq) RT.first(s), thistag, overrideables);
+              (ISeq) RT.first(s), thistag, overrideables, parameters);
           methods = RT.conj(methods, m);
           allmethods.remove(m.mk);
         }
@@ -8635,10 +8638,36 @@ public class Compiler implements Opcodes {
     }
 
     static public Map[] gatherMethods(Class sc, ISeq interfaces) {
+      Map<Class, Map<String, Class>> parameters = new HashMap<Class, Map<String, Class>>();
+
       Map allm = new HashMap();
       gatherMethods(sc, allm);
-      for (; interfaces != null; interfaces = interfaces.next())
-        gatherMethods((Class) interfaces.first(), allm);
+      for (; interfaces != null; interfaces = interfaces.next()) {
+        Class i = (Class) interfaces.first();
+        gatherMethods(i, allm);
+
+        for (java.lang.reflect.Type t : i.getGenericInterfaces()) {
+          if (t instanceof ParameterizedType) {
+            ParameterizedType p = (ParameterizedType) t;
+            Class r = (Class) p.getRawType();
+            TypeVariable[] l = r.getTypeParameters();
+            java.lang.reflect.Type[] k = p.getActualTypeArguments();
+            if (l.length != k.length) {
+              throw new RuntimeException();
+            }
+            HashMap<String, Class> params = new HashMap<String, Class>();
+            for (int j = 0; j < k.length; j++) {
+              if (k[j] instanceof Class) {
+                params.put(l[j].toString(), (Class) k[j]);
+              }
+            }
+            if (!params.isEmpty()) {
+              parameters.put((Class) ((ParameterizedType) t).getRawType(),
+                  params);
+            }
+          }
+        }
+      }
 
       Map<IPersistentVector, java.lang.reflect.Method> mm = new HashMap<IPersistentVector, java.lang.reflect.Method>();
       Map<IPersistentVector, Set<Class>> covariants = new HashMap<IPersistentVector, Set<Class>>();
@@ -8663,7 +8692,7 @@ public class Compiler implements Opcodes {
         } else
           mm.put(mk, m);
       }
-      return new Map[] { mm, covariants };
+      return new Map[] { mm, covariants, parameters };
     }
   }
 
@@ -8699,12 +8728,13 @@ public class Compiler implements Opcodes {
       return argTypes;
     }
 
-    static public IPersistentVector msig(String name, Class[] paramTypes) {
+    static public IPersistentVector msig(String name,
+        java.lang.reflect.Type[] paramTypes) {
       return RT.vector(name, RT.seq(paramTypes));
     }
 
     static NewInstanceMethod parse(ObjExpr objx, ISeq form, Symbol thistag,
-        Map overrideables) {
+        Map overrideables, Map parameters) {
       // (methodname [this-name args*] body...)
       // this-name might be nil
       NewInstanceMethod method = new NewInstanceMethod(objx,
@@ -8744,6 +8774,8 @@ public class Compiler implements Opcodes {
         method.argTypes = new Type[parms.count()];
         boolean hinted = tagOf(name) != null;
         Class[] pclasses = new Class[parms.count()];
+        java.lang.reflect.Type[] gclasses = new java.lang.reflect.Type[parms
+            .count()];
         Symbol[] psyms = new Symbol[parms.count()];
 
         for (int i = 0; i < parms.count(); i++) {
@@ -8796,6 +8828,7 @@ public class Compiler implements Opcodes {
               m = (java.lang.reflect.Method) matches.values().iterator().next();
               method.retClass = m.getReturnType();
               pclasses = m.getParameterTypes();
+              gclasses = m.getGenericParameterTypes();
             }
           }
         }
@@ -8818,10 +8851,20 @@ public class Compiler implements Opcodes {
         method.exclasses = m.getExceptionTypes();
 
         for (int i = 0; i < parms.count(); i++) {
+          java.lang.reflect.Type c = pclasses[i];
+          if (!parameters.isEmpty() && gclasses[i] != null) {
+            if (gclasses[i] instanceof TypeVariable) {
+              Map pm = (Map) parameters.get(m.getDeclaringClass());
+              String key = gclasses[i].toString();
+              if (pm != null && pm.containsKey(key)) {
+                c = (java.lang.reflect.Type) pm.get(key);
+              }
+            }
+          }
           LocalBinding lb = registerLocal(psyms[i], null, new MethodParamExpr(
-              pclasses[i]), true);
+              (Class) c), true);
           argLocals = argLocals.assocN(i, lb);
-          method.argTypes[i] = Type.getType(pclasses[i]);
+          method.argTypes[i] = Type.getType((Class) c);
         }
         for (int i = 0; i < parms.count(); i++) {
           if (pclasses[i] == long.class || pclasses[i] == double.class)
