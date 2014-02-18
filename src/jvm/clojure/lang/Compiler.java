@@ -1503,18 +1503,27 @@ public class Compiler implements Opcodes {
       return sb.toString();
     }
 
-    public static String emitTypedArgs(ObjExpr objx, GeneratorAdapter gen,
-        Class[] parameterTypes, IPersistentVector args) {
+    public static String combineArgs(List<String> a) {
       StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < parameterTypes.length; i++) {
+      for (String s : a) {
         if (sb.length() > 0) {
           sb.append(", ");
         }
+        sb.append(s);
+      }
+      return sb.toString();
+    }
+
+    public static List<String> emitTypedArgs(ObjExpr objx,
+        GeneratorAdapter gen, Class[] parameterTypes, IPersistentVector args) {
+      ArrayList<String> r = new ArrayList<String>();
+      for (int i = 0; i < parameterTypes.length; i++) {
         Expr e = (Expr) args.nth(i);
         try {
+          StringBuilder sb = new StringBuilder();
           final Class primc = maybePrimitiveType(e);
           String canonicalName = printClass(parameterTypes[i]);
-          if (!canonicalName.equals("java.lang.Object")) {
+          if (primc != null) {
             sb.append("(" + canonicalName + ")");
           }
           if (primc == parameterTypes[i]) {
@@ -1548,11 +1557,12 @@ public class Compiler implements Opcodes {
             v = HostExpr.emitUnboxArg(objx, gen, parameterTypes[i], v);
             sb.append(v);
           }
+          r.add(sb.toString());
         } catch (Exception e1) {
           e1.printStackTrace(RT.errPrintWriter());
         }
       }
-      return sb.toString();
+      return r;
     }
   }
 
@@ -1659,8 +1669,8 @@ public class Compiler implements Opcodes {
         String first = target.emit(C.EXPRESSION, objx, gen);
         // if(!method.getDeclaringClass().isInterface())
         gen.checkCast(type);
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
-            method.getParameterTypes(), args);
+        String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
+            gen, method.getParameterTypes(), args));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -1686,8 +1696,8 @@ public class Compiler implements Opcodes {
         String val = target.emit(C.EXPRESSION, objx, gen);
         // if(!method.getDeclaringClass().isInterface())
         gen.checkCast(type);
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
-            method.getParameterTypes(), args);
+        String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
+            gen, method.getParameterTypes(), args));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -1839,7 +1849,7 @@ public class Compiler implements Opcodes {
         GeneratorAdapter gen, Label falseLabel) {
       gen.visitLineNumber(line, gen.mark());
       if (method != null) {
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
+        List<String> argsList = MethodExpr.emitTypedArgs(objx, gen,
             method.getParameterTypes(), args);
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -1850,8 +1860,15 @@ public class Compiler implements Opcodes {
         for (int i = 0; i < predOps.length - 1; i++)
           gen.visitInsn((Integer) predOps[i]);
         gen.visitJumpInsn((Integer) predOps[predOps.length - 1], falseLabel);
-        return wrap(context, printClass(c) + "." + method.getName() + "("
-            + argsList + ")");
+
+        String op = (String) RT.get(SourceGenIntrinsics.preds,
+            method.toString());
+        if (argsList.size() == 1) {
+          return wrap(context, op + argsList.get(0));
+        } else if (argsList.size() == 2) {
+          return wrap(context, argsList.get(0) + " " + op + " " + argsList.get(1));
+        }
+        throw new RuntimeException("Error emiting intrinsics: " + op + " with " + argsList);
       } else
         throw new UnsupportedOperationException(
             "Unboxed emit of unknown member");
@@ -1860,7 +1877,7 @@ public class Compiler implements Opcodes {
     public String emitUnboxed(C context, ObjExpr objx, GeneratorAdapter gen) {
       gen.visitLineNumber(line, gen.mark());
       if (method != null) {
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
+        List<String> argsList = MethodExpr.emitTypedArgs(objx, gen,
             method.getParameterTypes(), args);
         // Type type = Type.getObjectType(className.replace('.', '/'));
         if (context == C.RETURN) {
@@ -1875,15 +1892,28 @@ public class Compiler implements Opcodes {
           } else
             gen.visitInsn((Integer) ops);
 
-          return wrap(context, printClass(method.getDeclaringClass()) + "."
-              + method.getName() + "(" + argsList + ")");
+          String op = (String) RT.get(SourceGenIntrinsics.ops,
+              method.toString());
+          String r;
+          if (op.equals("aget[]")) {
+            return wrap(context, argsList.get(0) + "[" + argsList.get(1) + "]");
+          } else if (op.equals("alength[]")) {
+            return wrap(context, argsList.get(0) + ".length");
+          } else if (argsList.size() == 1) {
+            return wrap(context, op + argsList.get(0));
+          } else if (argsList.size() == 2) {
+            return wrap(context,
+                argsList.get(0) + " " + op + " " + argsList.get(1));
+          }
+          throw new RuntimeException("Error emiting intrinsics");
+
         } else {
           Type type = Type.getType(c);
           Method m = new Method(methodName, Type.getReturnType(method),
               Type.getArgumentTypes(method));
           gen.invokeStatic(type, m);
           return wrap(context, printClass(c) + "." + m.getName() + "("
-              + argsList + ")");
+              + MethodExpr.combineArgs(argsList) + ")");
         }
       } else
         throw new UnsupportedOperationException(
@@ -1893,8 +1923,8 @@ public class Compiler implements Opcodes {
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
       gen.visitLineNumber(line, gen.mark());
       if (method != null) {
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
-            method.getParameterTypes(), args);
+        String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
+            gen, method.getParameterTypes(), args));
         // Type type = Type.getObjectType(className.replace('.', '/'));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -2753,8 +2783,8 @@ public class Compiler implements Opcodes {
         Type type = getType(c);
         gen.newInstance(type);
         gen.dup();
-        String argsList = MethodExpr.emitTypedArgs(objx, gen,
-            ctor.getParameterTypes(), args);
+        String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
+            gen, ctor.getParameterTypes(), args));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -4004,8 +4034,9 @@ public class Compiler implements Opcodes {
 
       gen.mark(onLabel); // target
       if (protocolOn != null) {
-        String argList = MethodExpr.emitTypedArgs(objx, gen,
-            onMethod.getParameterTypes(), RT.subvec(args, 1, args.count()));
+        String argList = MethodExpr
+            .combineArgs(MethodExpr.emitTypedArgs(objx, gen,
+                onMethod.getParameterTypes(), RT.subvec(args, 1, args.count())));
 
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -9548,7 +9579,13 @@ public class Compiler implements Opcodes {
     case Type.INT:
     case Type.SHORT:
     case Type.BYTE:
-      v = "RT.intCast(" + v + ")";
+      if (v.startsWith("((short)") || v.startsWith("((byte)")
+          || v.startsWith("((float)") || v.startsWith("((double)")
+          || v.startsWith("((long)")) {
+        v = "((int)" + v + ")";
+      } else if (!v.startsWith("((int)")) {
+        v = "RT.intCast(" + v + ")";
+      }
       break;
     default:
       if (c != Object.class && c != void.class) {
