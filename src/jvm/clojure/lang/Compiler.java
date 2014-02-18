@@ -2946,7 +2946,7 @@ public class Compiler implements Opcodes {
         gen.visitJumpInsn(IF_ACMPEQ, falseLabel);
         String temp = registerTemp();
         emitSource("Object " + temp + " = " + val + ";");
-        sb.append(temp + " != null && !(" + temp + " == Boolean.FALSE)");
+        sb.append(temp + " != null && " + temp + " != Boolean.FALSE");
       }
       sb.append(") {");
       emitSource(sb.toString());
