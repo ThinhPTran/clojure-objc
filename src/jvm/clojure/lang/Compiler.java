@@ -288,10 +288,6 @@ public class Compiler implements Opcodes {
       Namespace.findOrCreate(Symbol.intern("clojure.core")),
       Symbol.intern("add-annotations"));
 
-  static final public Var DEF_CONTEXT = Var.intern(
-      Namespace.findOrCreate(Symbol.intern("clojure.core")),
-      Symbol.intern("*def-context*"), Boolean.FALSE).setDynamic();
-
   static final public Keyword disableLocalsClearingKey = Keyword
       .intern("disable-locals-clearing");
   static final public Keyword elideMetaKey = Keyword.intern("elide-meta");
@@ -505,7 +501,7 @@ public class Compiler implements Opcodes {
       this.isDynamic = isDynamic;
       this.initProvided = initProvided;
 
-      if (init instanceof ObjExpr) {
+      if (init instanceof FnExpr) {
         emitOnInit = false;
       }
     }
@@ -656,21 +652,13 @@ public class Compiler implements Opcodes {
         // .without(Keyword.intern(null, "added"))
         // .without(Keyword.intern(null, "static"));
         mm = (IPersistentMap) elideMeta(mm);
-        if (RT.third(form) != null
-            && !RT.third(form).toString().startsWith("(new ")) {
-          Var.pushThreadBindings(RT.map(DEF_CONTEXT,
-              RT.vector(v, mm, isDynamic)));
-        }
+
         Expr meta = null;
         Expr initVal = analyze(context == C.EVAL ? context : C.EXPRESSION,
-            RT.third(form), sym.name);
-        if (!(initVal instanceof ObjExpr)) {
+            RT.third(form), sym.name, RT.vector(v, mm, isDynamic));
+        if (!(initVal instanceof FnExpr)) {
           meta = mm.count() == 0 ? null : analyze(context == C.EVAL ? context
               : C.EXPRESSION, mm);
-        }
-        if (RT.third(form) != null
-            && !RT.third(form).toString().startsWith("(new ")) {
-          Var.popThreadBindings();
         }
         return new DefExpr((String) SOURCE.deref(), lineDeref(), columnDeref(),
             v, initVal, meta, RT.count(form) == 3, isDynamic);
@@ -4258,7 +4246,7 @@ public class Compiler implements Opcodes {
       }
     }
 
-    static Expr parse(C context, ISeq form, String name) {
+    static Expr parse(C context, ISeq form, String name, Object defContext) {
       ISeq origForm = form;
       FnExpr fn = new FnExpr(tagOf(form));
       fn.src = form;
@@ -4290,8 +4278,6 @@ public class Compiler implements Opcodes {
             KEYWORD_CALLSITES, PersistentVector.EMPTY, PROTOCOL_CALLSITES,
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
             NO_RECUR, null));
-
-        Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
 
         // arglist might be preceded by symbol naming this fn
         if (RT.second(form) instanceof Symbol) {
@@ -4342,9 +4328,7 @@ public class Compiler implements Opcodes {
         if (variadicMethod != null)
           methods = RT.conj(methods, variadicMethod);
 
-        Var.popThreadBindings();
-
-        selfContain(context, fn);
+        selfContain(context, fn, defContext);
 
         fn.methods = methods;
         fn.variadicMethod = variadicMethod;
@@ -4369,10 +4353,14 @@ public class Compiler implements Opcodes {
 
       fn.hasMeta = RT.count(fmeta) > 0;
 
-      fn.setCompileData(fn.isVariadic() ? "clojure/lang/RestFn"
-          : "clojure/lang/AFunction",
-          (prims.size() == 0) ? null : prims.toArray(new String[prims.size()]),
-          fn.onceOnly);
+      try {
+        fn.compile(fn.isVariadic() ? "clojure/lang/RestFn"
+            : "clojure/lang/AFunction",
+            (prims.size() == 0) ? null : prims.toArray(new String[prims.size()]),
+            fn.onceOnly);
+      } catch (IOException e) {
+        throw Util.sneakyThrow(e);
+      }
       fn.getCompiledClass();
 
       if (fn.supportsMeta()) {
@@ -4459,17 +4447,8 @@ public class Compiler implements Opcodes {
     protected IPersistentMap classMeta;
     protected boolean isStatic;
 
-    private String superClazz;
-    private String[] prims;
     boolean isDynamic;
     Var var;
-
-    public void setCompileData(String superClazz, String[] prims,
-        boolean onceOnly) {
-      this.superClazz = superClazz;
-      this.prims = prims;
-      this.onceOnly = onceOnly;
-    }
 
     // public void selfContainVar(Var var, IPersistentMap mm, boolean isDynamic)
     // {
@@ -5446,11 +5425,6 @@ public class Compiler implements Opcodes {
 
     synchronized Class getCompiledClass() {
       if (compiledClass == null) {
-        try {
-          compile(superClazz, prims, onceOnly);
-        } catch (IOException e) {
-          throw Util.sneakyThrow(e);
-        }
         // if(RT.booleanCast(COMPILE_FILES.deref()))
         // compiledClass = RT.classForName(name);//loader.defineClass(name,
         // bytecode);
@@ -7294,6 +7268,10 @@ public class Compiler implements Opcodes {
   }
 
   private static Expr analyze(C context, Object form, String name) {
+    return analyze(context, form, name, null);
+  }
+  
+  private static Expr analyze(C context, Object form, String name, Object defContext) {
     // todo symbol macro expansion?
     try {
       if (form instanceof LazySeq) {
@@ -7326,7 +7304,7 @@ public class Compiler implements Opcodes {
               : C.EXPRESSION, ((IObj) form).meta()));
         return ret;
       } else if (form instanceof ISeq)
-        return analyzeSeq(context, (ISeq) form, name);
+        return analyzeSeq(context, (ISeq) form, name, defContext);
       else if (form instanceof IPersistentVector)
         return VectorExpr.parse(context, (IPersistentVector) form);
       else if (form instanceof IRecord)
@@ -7487,7 +7465,7 @@ public class Compiler implements Opcodes {
     return form;
   }
 
-  private static Expr analyzeSeq(C context, ISeq form, String name) {
+  private static Expr analyzeSeq(C context, ISeq form, String name, Object defContext) {
     Object line = lineDeref();
     Object column = columnDeref();
     if (RT.meta(form) != null && RT.meta(form).containsKey(RT.LINE_KEY))
@@ -7498,18 +7476,18 @@ public class Compiler implements Opcodes {
     try {
       Object me = macroexpand1(form);
       if (me != form)
-        return analyze(context, me, name);
-
+        return analyze(context, me, name, defContext);
+      
       Object op = RT.first(form);
       if (op == null)
         throw new IllegalArgumentException("Can't call nil");
       IFn inline = isInline(op, RT.count(RT.next(form)));
-      if (inline != null)
+      if (inline != null) 
         return analyze(context,
             preserveTag(form, inline.applyTo(RT.next(form))));
       IParser p;
       if (op.equals(FN))
-        return FnExpr.parse(context, form, name);
+        return FnExpr.parse(context, form, name, defContext);
       else if ((p = (IParser) specials.valAt(op)) != null)
         return p.parse(context, form);
       else
@@ -8389,8 +8367,6 @@ public class Compiler implements Opcodes {
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
             NO_RECUR, null));
 
-        Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
-
         if (ret.isDeftype()) {
           Var.pushThreadBindings(RT.mapUniqueKeys(METHOD, null, LOCAL_ENV,
               ret.fields, COMPILE_STUB_SYM, Symbol.intern(null, tagName),
@@ -8423,9 +8399,6 @@ public class Compiler implements Opcodes {
             }
           }
         }
-        Var.popThreadBindings();
-
-        selfContain(context, ret);
 
         ret.overrideMethods = overrideMethods;
         ret.methods = methods;
@@ -8442,7 +8415,11 @@ public class Compiler implements Opcodes {
         Var.popThreadBindings();
       }
 
-      ret.setCompileData(slashname(superClass), inames, false);
+      try {
+        ret.compile(slashname(superClass), inames, false);        
+      } catch (Exception e) {
+        throw Util.sneakyThrow(e);
+      }
       ret.getCompiledClass();
       return ret;
     }
@@ -9752,16 +9729,14 @@ public class Compiler implements Opcodes {
     }
   }
 
-  private static void selfContain(C context, ObjExpr fn) {
-    if (!Boolean.FALSE.equals(DEF_CONTEXT.deref())) {
-      PersistentVector v = (PersistentVector) DEF_CONTEXT.deref();
-      Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
+  private static void selfContain(C context, ObjExpr fn, Object defContext) {
+    if (defContext != null) {
+      PersistentVector v = (PersistentVector) defContext;
       fn.var = (Var) v.get(0);
       IPersistentMap mm = (IPersistentMap) v.get(1);
       fn.meta = mm.count() == 0 ? null : analyze(context == C.EVAL ? context
           : C.EXPRESSION, mm);
       fn.isDynamic = (Boolean) v.get(2);
-      Var.popThreadBindings();
     }
   }
 }

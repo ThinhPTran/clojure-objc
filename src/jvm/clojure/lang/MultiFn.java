@@ -82,12 +82,12 @@ public class MultiFn extends AFn {
     try {
       // TODO: allow this in ios?
       // This is very slow in objc runtime
-      if (!ObjC.objc && prefers(dispatchValY, dispatchValX))
-        throw new IllegalStateException(
-            String
-                .format(
-                    "Preference conflict in multimethod '%s': %s is already preferred to %s",
-                    name, dispatchValY, dispatchValX));
+//      if (!ObjC.objc && prefers(dispatchValY, dispatchValX))
+//        throw new IllegalStateException(
+//            String
+//                .format(
+//                    "Preference conflict in multimethod '%s': %s is already preferred to %s",
+//                    name, dispatchValY, dispatchValX));
       preferTable = getPreferTable().assoc(
           dispatchValX,
           RT.conj((IPersistentCollection) RT.get(getPreferTable(),
