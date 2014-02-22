@@ -3106,8 +3106,6 @@ public class Compiler implements Opcodes {
   static final public IPersistentMap CHAR_MAP = PersistentHashMap.create(
       '-',
       "_",
-      '©',
-      "_OBJC_",
       // '.', "_DOT_",
       ':', "_COLON_", '+', "_PLUS_", '>', "_GT_", '<', "_LT_", '=', "_EQ_",
       '~', "_TILDE_", '!', "_BANG_", '@', "_CIRCA_", '#', "_SHARP_", '\'',
