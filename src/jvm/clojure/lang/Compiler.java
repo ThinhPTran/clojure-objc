@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.TypeVariable;
@@ -287,6 +288,10 @@ public class Compiler implements Opcodes {
       Namespace.findOrCreate(Symbol.intern("clojure.core")),
       Symbol.intern("add-annotations"));
 
+  static final public Var DEF_CONTEXT = Var.intern(
+      Namespace.findOrCreate(Symbol.intern("clojure.core")),
+      Symbol.intern("*def-context*"), Boolean.FALSE).setDynamic();
+
   static final public Keyword disableLocalsClearingKey = Keyword
       .intern("disable-locals-clearing");
   static final public Keyword elideMetaKey = Keyword.intern("elide-meta");
@@ -471,12 +476,13 @@ public class Compiler implements Opcodes {
   static class DefExpr implements Expr {
     public final Var var;
     public final Expr init;
-    public final Expr meta;
     public final boolean initProvided;
     public final boolean isDynamic;
     public final String source;
     public final int line;
     public final int column;
+    private boolean emitOnInit = true;
+    private Expr meta;
     final static Method bindRootMethod = Method
         .getMethod("void bindRoot(Object)");
     final static Method setTagMethod = Method
@@ -498,6 +504,10 @@ public class Compiler implements Opcodes {
       this.meta = meta;
       this.isDynamic = isDynamic;
       this.initProvided = initProvided;
+
+      if (init instanceof ObjExpr) {
+        emitOnInit = false;
+      }
     }
 
     // private boolean includesExplicitMetadata(MapExpr expr) {
@@ -519,8 +529,8 @@ public class Compiler implements Opcodes {
           var.bindRoot(init.eval());
         }
         if (meta != null) {
-          IPersistentMap metaMap = (IPersistentMap) meta.eval();
-          if (initProvided || true)// includesExplicitMetadata((MapExpr) meta))
+          if (initProvided)// includesExplicitMetadata((MapExpr)
+                           // meta))
             var.setMeta((IPersistentMap) meta.eval());
         }
         return var.setDynamic(isDynamic);
@@ -533,39 +543,43 @@ public class Compiler implements Opcodes {
     }
 
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
-      String constant = objx.emitVar(gen, var);
-      if (isDynamic) {
-        gen.push(isDynamic);
-        gen.invokeVirtual(VAR_TYPE, setDynamicMethod);
-        emitSource(constant + ".setDynamic(true);");
-      }
-      if (meta != null) {
-        if (initProvided || true)// includesExplicitMetadata((MapExpr) meta))
-        {
-          gen.dup();
-          String val = meta.emit(C.EXPRESSION, objx, gen);
-          gen.checkCast(IPERSISTENTMAP_TYPE);
-          gen.invokeVirtual(VAR_TYPE, setMetaMethod);
-          emitSource(constant + ".setMeta((IPersistentMap)" + val + ");");
+      if (emitOnInit) {
+        String constant = objx.emitVar(gen, var);
+        if (isDynamic) {
+          gen.push(isDynamic);
+          gen.invokeVirtual(VAR_TYPE, setDynamicMethod);
+          emitSource(constant + ".setDynamic(true);");
         }
-      }
+        if (meta != null) {
+          if (initProvided || true)// includesExplicitMetadata((MapExpr) meta))
+          {
+            gen.dup();
+            String val = meta.emit(C.EXPRESSION, objx, gen);
+            gen.checkCast(IPERSISTENTMAP_TYPE);
+            gen.invokeVirtual(VAR_TYPE, setMetaMethod);
+            emitSource(constant + ".setMeta((IPersistentMap)" + val + ");");
+          }
+        }
 
-      if (initProvided) {
-        gen.dup();
-        String val;
-        if (init instanceof FnExpr) {
-          val = ((FnExpr) init).emitForDefn(objx, gen);
-        } else
-          val = init.emit(C.EXPRESSION, objx, gen);
-        gen.invokeVirtual(VAR_TYPE, bindRootMethod);
-        emitSource(constant + ".bindRoot(" + val + ");");
-      }
+        if (initProvided) {
+          gen.dup();
+          String val;
+          if (init instanceof FnExpr) {
+            val = ((FnExpr) init).emitForDefn(objx, gen);
+          } else
+            val = init.emit(C.EXPRESSION, objx, gen);
+          gen.invokeVirtual(VAR_TYPE, bindRootMethod);
+          emitSource(constant + ".bindRoot(" + val + ");");
+        }
 
-      if (context == C.STATEMENT) {
-        gen.pop();
-        return "";
+        if (context == C.STATEMENT) {
+          gen.pop();
+          return "";
+        } else {
+          return wrap(context, constant);
+        }
       } else {
-        return wrap(context, constant);
+        return "";
       }
     }
 
@@ -642,12 +656,24 @@ public class Compiler implements Opcodes {
         // .without(Keyword.intern(null, "added"))
         // .without(Keyword.intern(null, "static"));
         mm = (IPersistentMap) elideMeta(mm);
-        Expr meta = mm.count() == 0 ? null : analyze(
-            context == C.EVAL ? context : C.EXPRESSION, mm);
+        if (RT.third(form) != null
+            && !RT.third(form).toString().startsWith("(new ")) {
+          Var.pushThreadBindings(RT.map(DEF_CONTEXT,
+              RT.vector(v, mm, isDynamic)));
+        }
+        Expr meta = null;
+        Expr initVal = analyze(context == C.EVAL ? context : C.EXPRESSION,
+            RT.third(form), sym.name);
+        if (!(initVal instanceof ObjExpr)) {
+          meta = mm.count() == 0 ? null : analyze(context == C.EVAL ? context
+              : C.EXPRESSION, mm);
+        }
+        if (RT.third(form) != null
+            && !RT.third(form).toString().startsWith("(new ")) {
+          Var.popThreadBindings();
+        }
         return new DefExpr((String) SOURCE.deref(), lineDeref(), columnDeref(),
-            v, analyze(context == C.EVAL ? context : C.EXPRESSION,
-                RT.third(form), v.sym.name), meta, RT.count(form) == 3,
-            isDynamic);
+            v, initVal, meta, RT.count(form) == 3, isDynamic);
       }
     }
   }
@@ -1646,8 +1672,12 @@ public class Compiler implements Opcodes {
         if (method != null) {
           LinkedList ms = new LinkedList();
           ms.add(method);
-          return Reflector.invokeMatchingMethod(methodName, ms, targetval,
-              argvals);
+          try {
+            return Reflector.invokeMatchingMethod(methodName, ms, targetval,
+                argvals);
+          } catch (Exception e) {
+            System.out.println(targetval.getClass() + " " + LINE.deref());
+          }
         }
         return Reflector.invokeInstanceMethod(targetval, methodName, argvals);
       } catch (Throwable e) {
@@ -1866,9 +1896,11 @@ public class Compiler implements Opcodes {
         if (argsList.size() == 1) {
           return wrap(context, op + argsList.get(0));
         } else if (argsList.size() == 2) {
-          return wrap(context, argsList.get(0) + " " + op + " " + argsList.get(1));
+          return wrap(context,
+              argsList.get(0) + " " + op + " " + argsList.get(1));
         }
-        throw new RuntimeException("Error emiting intrinsics: " + op + " with " + argsList);
+        throw new RuntimeException("Error emiting intrinsics: " + op + " with "
+            + argsList);
       } else
         throw new UnsupportedOperationException(
             "Unboxed emit of unknown member");
@@ -4259,6 +4291,8 @@ public class Compiler implements Opcodes {
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
             NO_RECUR, null));
 
+        Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
+
         // arglist might be preceded by symbol naming this fn
         if (RT.second(form) instanceof Symbol) {
           Symbol nm = (Symbol) RT.second(form);
@@ -4308,6 +4342,10 @@ public class Compiler implements Opcodes {
         if (variadicMethod != null)
           methods = RT.conj(methods, variadicMethod);
 
+        Var.popThreadBindings();
+
+        selfContain(context, fn);
+
         fn.methods = methods;
         fn.variadicMethod = variadicMethod;
         fn.keywords = (IPersistentMap) KEYWORDS.deref();
@@ -4331,14 +4369,10 @@ public class Compiler implements Opcodes {
 
       fn.hasMeta = RT.count(fmeta) > 0;
 
-      try {
-        fn.compile(
-            fn.isVariadic() ? "clojure/lang/RestFn" : "clojure/lang/AFunction",
-            (prims.size() == 0) ? null
-                : prims.toArray(new String[prims.size()]), fn.onceOnly);
-      } catch (IOException e) {
-        throw Util.sneakyThrow(e);
-      }
+      fn.setCompileData(fn.isVariadic() ? "clojure/lang/RestFn"
+          : "clojure/lang/AFunction",
+          (prims.size() == 0) ? null : prims.toArray(new String[prims.size()]),
+          fn.onceOnly);
       fn.getCompiledClass();
 
       if (fn.supportsMeta()) {
@@ -4378,7 +4412,11 @@ public class Compiler implements Opcodes {
     }
   }
 
+  public static IPersistentMap fnVarMap = RT.map();
+
   static public class ObjExpr implements Expr {
+    private static final Method VAR_METHOD = Method
+        .getMethod("clojure.lang.Var var(String,String)");
     static final String CONST_PREFIX = "const__";
     String name;
     // String simpleName;
@@ -4406,6 +4444,7 @@ public class Compiler implements Opcodes {
     int line;
     int column;
     PersistentVector constants;
+    IPersistentSet usedConstants = PersistentTreeSet.EMPTY;
     int constantsID;
     int altCtorDrops = 0;
 
@@ -4419,6 +4458,25 @@ public class Compiler implements Opcodes {
     final static Method voidctor = Method.getMethod("void <init>()");
     protected IPersistentMap classMeta;
     protected boolean isStatic;
+
+    private String superClazz;
+    private String[] prims;
+    boolean isDynamic;
+    Var var;
+
+    public void setCompileData(String superClazz, String[] prims,
+        boolean onceOnly) {
+      this.superClazz = superClazz;
+      this.prims = prims;
+      this.onceOnly = onceOnly;
+    }
+
+    // public void selfContainVar(Var var, IPersistentMap mm, boolean isDynamic)
+    // {
+    // this.var = var;
+    // this.mm = mm;
+    // this.isDynamic = isDynamic;
+    // }
 
     public final String name() {
       return name;
@@ -4496,6 +4554,7 @@ public class Compiler implements Opcodes {
 
     private DynamicClassLoader loader;
     private byte[] bytecode;
+    Expr meta;
 
     public ObjExpr(Object tag) {
       this.tag = tag;
@@ -4602,6 +4661,12 @@ public class Compiler implements Opcodes {
           + (interfaces.length() > 0 ? " implements " : "") + interfaces + " {");
       tab();
 
+      // for(int i=0;i<varCallsites.count();i++)
+      // {
+      // cv.visitField(ACC_PRIVATE + ACC_STATIC + ACC_FINAL
+      // , varCallsiteName(i), IFN_TYPE.getDescriptor(), null, null);
+      // }
+
       // static fields for constants
       for (int i = 0; i < constants.count(); i++) {
         emitSource("public static final " + printClass(constantType(i)) + " "
@@ -4623,20 +4688,30 @@ public class Compiler implements Opcodes {
             ILOOKUP_THUNK_TYPE.getDescriptor(), null, null);
       }
 
-      // for(int i=0;i<varCallsites.count();i++)
-      // {
-      // cv.visitField(ACC_PRIVATE + ACC_STATIC + ACC_FINAL
-      // , varCallsiteName(i), IFN_TYPE.getDescriptor(), null, null);
-      // }
+      if (var != null) {
+        cv.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC, "VAR",
+            VAR_TYPE.getDescriptor(), null, null);
+        emitSource("public static Var VAR = RT.var(\"" + var.ns.name.name
+            + "\", \"" + var.sym.name + "\");");
+      }
 
       // static init for constants, keywords and vars
-      emitSource("static {");
-      tab();
       GeneratorAdapter clinitgen = new GeneratorAdapter(
           ACC_PUBLIC + ACC_STATIC, Method.getMethod("void <clinit> ()"), null,
           null, cv);
       clinitgen.visitCode();
       clinitgen.visitLineNumber(line, clinitgen.mark());
+
+      emitSource("static {");
+      tab();
+
+      if (var != null) {
+        clinitgen.push(var.ns.name.name);
+        clinitgen.push(var.sym.name);
+        clinitgen.invokeStatic(RT_TYPE, VAR_METHOD);
+        // clinitgen.checkCast(VAR_TYPE);
+        clinitgen.putStatic(objtype, "VAR", VAR_TYPE);
+      }
 
       if (constants.count() > 0) {
         emitConstants(clinitgen);
@@ -4665,12 +4740,42 @@ public class Compiler implements Opcodes {
        * 
        * clinitgen.mark(endLabel); }
        */
-      clinitgen.returnValue();
 
-      clinitgen.endMethod();
+      if (var != null) {
+        clinitgen.getStatic(objtype, "VAR", VAR_TYPE);
+        if (isDynamic) {
+          clinitgen.invokeVirtual(VAR_TYPE, setDynamicMethod);
+        }
+        String metaString = null;
+        if (meta != null) {
+          clinitgen.dup();
+          metaString = meta.emit(C.EXPRESSION, this, clinitgen);
+          clinitgen.checkCast(IPERSISTENTMAP_TYPE);
+          clinitgen.invokeVirtual(VAR_TYPE, setMetaMethod);
+        }
+
+        String val;
+        if (this instanceof FnExpr) {
+          val = ((FnExpr) this).emitForDefn(this, clinitgen);
+        } else
+          val = emit(C.EXPRESSION, this, clinitgen);
+        clinitgen.invokeVirtual(VAR_TYPE, bindRoot2Method);
+        clinitgen.pop();
+
+        if (COMPILE_PATH.deref() != null) {
+          fnVarMap = fnVarMap.assoc(var, packageName + "." + className);
+        }
+        emitSource("VAR.bindRoot2(new " + packageName + "." + className + "())"
+            + (isDynamic ? ".setDynamic()" : "")
+            + (metaString != null ? ".setMeta2(" + metaString : "") + ");");
+      }
 
       untab();
       emitSource("}");
+
+      clinitgen.returnValue();
+
+      clinitgen.endMethod();
 
       StringBuilder sb = new StringBuilder();
       if (supportsMeta()) {
@@ -5136,13 +5241,20 @@ public class Compiler implements Opcodes {
         else if (value instanceof Var) {
           Var var = (Var) value;
           String ns_ = var.ns.name.toString();
-          gen.push(ns_);
           String name_ = var.sym.toString();
-          gen.push(name_);
-          gen.invokeStatic(RT_TYPE,
-              Method.getMethod("clojure.lang.Var var(String,String)"));
-          str = "RT.var(" + (ns_ == null ? "null" : "\"" + ns_ + "\"") + ", "
-              + (name_ == null ? "null" : "\"" + name_ + "\"") + ")";
+          String className = (String) fnVarMap.valAt(value);
+          if (className == null || COMPILE_PATH.deref() == null) {
+            gen.push(ns_);
+            gen.push(name_);
+            gen.invokeStatic(RT_TYPE, VAR_METHOD);
+            str = "RT.var(" + (ns_ == null ? "null" : "\"" + ns_ + "\"") + ", "
+                + (name_ == null ? "null" : "\"" + name_ + "\"") + ")";
+          } else {
+            gen.getStatic(
+                Type.getType("L" + className.replaceAll("\\.", "/") + ";"),
+                "VAR", VAR_TYPE);
+            str = className + ".VAR";
+          }
         } else if (value instanceof IType) {
           Method ctor = new Method(
               "<init>",
@@ -5252,7 +5364,6 @@ public class Compiler implements Opcodes {
             throw Util
                 .runtimeException("Can't embed unreadable object in code: "
                     + cs);
-
           gen.push(cs);
           gen.invokeStatic(RT_TYPE, readStringMethod);
           partial = false;
@@ -5262,14 +5373,18 @@ public class Compiler implements Opcodes {
 
       if (partial) {
         if (value instanceof IObj && RT.count(((IObj) value).meta()) > 0) {
-          gen.checkCast(IOBJ_TYPE);
+          if (gen != null) {
+            gen.checkCast(IOBJ_TYPE);
+          }
           Object m = ((IObj) value).meta();
           String val = emitValue(elideMeta(m), gen);
-          gen.checkCast(IPERSISTENTMAP_TYPE);
-          gen.invokeInterface(
-              IOBJ_TYPE,
-              Method
-                  .getMethod("clojure.lang.IObj withMeta(clojure.lang.IPersistentMap)"));
+          if (gen != null) {
+            gen.checkCast(IPERSISTENTMAP_TYPE);
+            gen.invokeInterface(
+                IOBJ_TYPE,
+                Method
+                    .getMethod("clojure.lang.IObj withMeta(clojure.lang.IPersistentMap)"));
+          }
           return "((clojure.lang.IObj)" + str + ").withMeta((IPersistentMap)"
               + val + ")";
         }
@@ -5331,12 +5446,27 @@ public class Compiler implements Opcodes {
 
     synchronized Class getCompiledClass() {
       if (compiledClass == null) {
+        try {
+          compile(superClazz, prims, onceOnly);
+        } catch (IOException e) {
+          throw Util.sneakyThrow(e);
+        }
         // if(RT.booleanCast(COMPILE_FILES.deref()))
         // compiledClass = RT.classForName(name);//loader.defineClass(name,
         // bytecode);
         // else
         loader = (DynamicClassLoader) LOADER.deref();
         compiledClass = loader.defineClass(name, bytecode, src);
+        try {
+          // Force load
+          Field declaredField = compiledClass.getDeclaredField("VAR");
+          if (declaredField != null) {
+            declaredField.get(null);
+          }
+        } catch (NoSuchFieldException e) {
+        } catch (Exception e) {
+          throw Util.sneakyThrow(e);
+        }
       }
       return compiledClass;
     }
@@ -5408,6 +5538,7 @@ public class Compiler implements Opcodes {
       if (context == C.STATEMENT) {
         gen.pop();
       }
+
       if (!val.isEmpty()) {
         return wrap(context, val);
       } else {
@@ -5540,6 +5671,12 @@ public class Compiler implements Opcodes {
     }
 
     final static Method varGetMethod = Method.getMethod("Object get()");
+    final static Method bindRoot2Method = Method
+        .getMethod("clojure.lang.Var bindRoot2(Object)");
+    final static Method setDynamicMethod = Method
+        .getMethod("clojure.lang.Var setDynamic()");
+    final static Method setMetaMethod = Method
+        .getMethod("void setMeta(clojure.lang.IPersistentMap)");
     final static Method varGetRawMethod = Method
         .getMethod("Object getRawRoot()");
 
@@ -5563,6 +5700,7 @@ public class Compiler implements Opcodes {
     }
 
     public String emitConstant(GeneratorAdapter gen, int id) {
+      usedConstants = (IPersistentSet) usedConstants.cons(id);
       String constantName = constantName(id);
       Type constantType = constantType(id);
       gen.getStatic(objtype, constantName, constantType);
@@ -7719,6 +7857,7 @@ public class Compiler implements Opcodes {
   private static void registerVar(Var var) {
     if (!VARS.isBound())
       return;
+
     IPersistentMap varsMap = (IPersistentMap) VARS.deref();
     Object id = RT.get(varsMap, var);
     if (id == null) {
@@ -7975,7 +8114,6 @@ public class Compiler implements Opcodes {
         LINE_BEFORE.set(pushbackReader.getLineNumber());
         COLUMN_BEFORE.set(pushbackReader.getColumnNumber());
       }
-
       // end of load
       gen.returnValue();
       gen.endMethod();
@@ -7984,7 +8122,9 @@ public class Compiler implements Opcodes {
       emitSource("}");
 
       // static fields for constants
-      for (int i = 0; i < objx.constants.count(); i++) {
+      PersistentVector constants = PersistentVector.create(objx.usedConstants.seq());
+      for (int j = 0; j < constants.count(); j++) {
+        int i = (Integer)constants.nth(j);
         cv.visitField(ACC_PUBLIC + ACC_FINAL + ACC_STATIC,
             objx.constantName(i), objx.constantType(i).getDescriptor(), null,
             null);
@@ -7994,8 +8134,8 @@ public class Compiler implements Opcodes {
       }
 
       final int INITS_PER = 100;
-      int numInits = objx.constants.count() / INITS_PER;
-      if (objx.constants.count() % INITS_PER != 0)
+      int numInits = constants.count() / INITS_PER;
+      if (constants.count() % INITS_PER != 0)
         ++numInits;
 
       for (int n = 0; n < numInits; n++) {
@@ -8008,8 +8148,9 @@ public class Compiler implements Opcodes {
         try {
           Var.pushThreadBindings(RT.map(RT.PRINT_DUP, RT.T));
 
-          for (int i = n * INITS_PER; i < objx.constants.count()
-              && i < (n + 1) * INITS_PER; i++) {
+          for (int j = n * INITS_PER; j < constants.count()
+              && j < (n + 1) * INITS_PER; j++) {
+            int i = (Integer)constants.nth(j);
             String val = objx.emitValue(objx.constants.nth(i), clinitgen);
             clinitgen.checkCast(objx.constantType(i));
             clinitgen.putStatic(objx.objtype, objx.constantName(i),
@@ -8103,6 +8244,8 @@ public class Compiler implements Opcodes {
       writeSourceFile(objx.internalName, source.toString());
     } catch (LispReader.ReaderException e) {
       throw new CompilerException(sourcePath, e.line, e.column, e.getCause());
+    } catch (Exception e) {
+      e.printStackTrace();
     } finally {
       Var.popThreadBindings();
     }
@@ -8139,9 +8282,9 @@ public class Compiler implements Opcodes {
           opts = opts.assoc(rform.first(), RT.second(rform));
           rform = rform.next().next();
         }
-        ObjExpr ret = build((IPersistentVector) RT.get(opts, implementsKey,
-            PersistentVector.EMPTY), fields, null, tagname, classname,
-            (Symbol) RT.get(opts, RT.TAG_KEY), rform, frm);
+        ObjExpr ret = build(context, (IPersistentVector) RT.get(opts,
+            implementsKey, PersistentVector.EMPTY), fields, null, tagname,
+            classname, (Symbol) RT.get(opts, RT.TAG_KEY), rform, frm);
         return ret;
       }
     }
@@ -8163,7 +8306,7 @@ public class Compiler implements Opcodes {
 
         rform = RT.next(rform);
 
-        ObjExpr ret = build(interfaces, null, null, classname,
+        ObjExpr ret = build(context, interfaces, null, null, classname,
             Symbol.intern(classname), null, rform, frm);
         if (frm instanceof IObj && ((IObj) frm).meta() != null)
           return new MetaExpr(ret, MapExpr.parse(context == C.EVAL ? context
@@ -8173,9 +8316,10 @@ public class Compiler implements Opcodes {
       }
     }
 
-    static ObjExpr build(IPersistentVector interfaceSyms,
+    static ObjExpr build(C context, IPersistentVector interfaceSyms,
         IPersistentVector fieldSyms, Symbol thisSym, String tagName,
         Symbol className, Symbol typeTag, ISeq methodForms, Object frm) {
+
       NewInstanceExpr ret = new NewInstanceExpr(null);
 
       ret.src = frm;
@@ -8244,6 +8388,9 @@ public class Compiler implements Opcodes {
             KEYWORD_CALLSITES, PersistentVector.EMPTY, PROTOCOL_CALLSITES,
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
             NO_RECUR, null));
+
+        Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
+
         if (ret.isDeftype()) {
           Var.pushThreadBindings(RT.mapUniqueKeys(METHOD, null, LOCAL_ENV,
               ret.fields, COMPILE_STUB_SYM, Symbol.intern(null, tagName),
@@ -8276,6 +8423,10 @@ public class Compiler implements Opcodes {
             }
           }
         }
+        Var.popThreadBindings();
+
+        selfContain(context, ret);
+
         ret.overrideMethods = overrideMethods;
         ret.methods = methods;
         ret.keywords = (IPersistentMap) KEYWORDS.deref();
@@ -8291,11 +8442,7 @@ public class Compiler implements Opcodes {
         Var.popThreadBindings();
       }
 
-      try {
-        ret.compile(slashname(superClass), inames, false);
-      } catch (IOException e) {
-        throw Util.sneakyThrow(e);
-      }
+      ret.setCompileData(slashname(superClass), inames, false);
       ret.getCompiledClass();
       return ret;
     }
@@ -9602,6 +9749,19 @@ public class Compiler implements Opcodes {
       emitSource(body);
     } else {
       emitSource((ex ? r + " = " : "") + body + (ex ? ";" : ""));
+    }
+  }
+
+  private static void selfContain(C context, ObjExpr fn) {
+    if (!Boolean.FALSE.equals(DEF_CONTEXT.deref())) {
+      PersistentVector v = (PersistentVector) DEF_CONTEXT.deref();
+      Var.pushThreadBindings(RT.map(DEF_CONTEXT, Boolean.FALSE));
+      fn.var = (Var) v.get(0);
+      IPersistentMap mm = (IPersistentMap) v.get(1);
+      fn.meta = mm.count() == 0 ? null : analyze(context == C.EVAL ? context
+          : C.EXPRESSION, mm);
+      fn.isDynamic = (Boolean) v.get(2);
+      Var.popThreadBindings();
     }
   }
 }

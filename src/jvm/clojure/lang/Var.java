@@ -235,6 +235,11 @@ public void setMeta(IPersistentMap m) {
     resetMeta(m.assoc(nameKey, sym).assoc(nsKey, ns));
 }
 
+public Var setMeta2(IPersistentMap m) {
+  setMeta(m);
+  return this;
+}
+
 public void setMacro() {
     alterMeta(assoc, RT.list(macroKey, RT.T));
 }
@@ -273,8 +278,13 @@ synchronized public void bindRoot(Object root){
 	Object oldroot = this.root;
 	this.root = root;
 	++rev;
-        alterMeta(dissoc, RT.list(macroKey));
-    notifyWatches(oldroot,this.root);
+//  alterMeta(dissoc, RT.list(macroKey));
+  notifyWatches(oldroot,this.root);
+}
+
+synchronized public Var bindRoot2(Object root){
+  bindRoot(root);
+  return this;
 }
 
 synchronized void swapRoot(Object root){
