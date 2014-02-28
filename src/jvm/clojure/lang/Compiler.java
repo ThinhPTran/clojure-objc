@@ -4744,7 +4744,7 @@ public class Compiler implements Opcodes {
         }
         emitSource("VAR.bindRoot2(new " + packageName + "." + className + "())"
             + (isDynamic ? ".setDynamic()" : "")
-            + (metaString != null ? ".setMeta2(" + metaString : "") + ");");
+            + (metaString != null ? ".setMeta2(" + metaString + ")" : "") + ";");
       }
 
       untab();

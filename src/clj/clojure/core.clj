@@ -4781,7 +4781,7 @@
   (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
     `(do
        (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
-       (alter-meta! (var ~name) assoc :inline (fn ~name ~args ~expr))
+       (alter-meta! (var ~name) assoc :inline (fn ~args ~expr))
        (var ~name))))
 
 (defn empty
@@ -5925,7 +5925,8 @@
 (alter-meta! #'load-file assoc :added "1.0")
 
 (defmacro add-doc-and-meta {:private true} [name docstring meta]
-  `(alter-meta! (var ~name) merge (assoc ~meta :doc ~docstring)))
+  (when-not *compile-path*
+    `(alter-meta! (var ~name) merge (assoc ~meta :doc ~docstring))))
 
 (add-doc-and-meta *file*
   "The path of the file being evaluated, as a String.
