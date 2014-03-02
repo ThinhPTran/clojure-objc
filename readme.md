@@ -25,11 +25,14 @@ A clojure compiler that targets objc runtimes.
 ## Goals
 
  * Write iOS and MacOS apps in clojure
- * Future proof: changes on clojure should be easy to add 
+ * Future proof: share 99.99% of the code base with clojure-jvm
  * Distribute clojure-objc libs using maven
- * Pure clojure libs should 'just work' (if they only use the jre emulated classes)
- * ObjC dynamic interop
+ * Existing clojure libs should 'just work'
+ * objc dynamic interop
  * Run tests in the jvm (with no ObjC interop)
+ * Dynamic c interop
+ * Dynamic objc subclassing
+ * REPL
  
 ## Memory management
  
@@ -46,10 +49,7 @@ A clojure compiler that targets objc runtimes.
             :otherButtonTitles nil) :show))
 
 ## What doesn't work (yet)
- 
- * no repl in the objc runtime
- * no objc subclassing
- * no c interop
+
  * clojure.core/bean: missing the emulated jre support
  * clojure.core/case: hashCode in java and hash in objc are different, you can use case but condp will be used instead
  * all java.net (slurp, reader from url, etc.): https://code.google.com/p/j2objc/issues/detail?id=28 (you can always use objc interop for this)
