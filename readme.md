@@ -28,8 +28,7 @@ A clojure compiler that targets objc runtimes.
  * Future proof: share 99.99% of the code base with clojure-jvm
  * Distribute clojure-objc libs using maven
  * Existing clojure libs should 'just work'
- * objc dynamic interop
- * Run tests in the jvm (with no ObjC interop)
+ * Dynamic objc interop
  * Dynamic c interop
  * Dynamic objc subclassing
  * REPL
