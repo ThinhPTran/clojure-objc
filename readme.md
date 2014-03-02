@@ -47,12 +47,6 @@ A clojure compiler that targets objc runtimes.
             :delegate nil
             :cancelButtonTitle "Cancelar"
             :otherButtonTitles nil) :show))
-
-## What doesn't work (yet)
-
- * clojure.core/bean: missing the emulated jre support
- * clojure.core/case: hashCode in java and hash in objc are different, you can use case but condp will be used instead
- * all java.net (slurp, reader from url, etc.): https://code.google.com/p/j2objc/issues/detail?id=28 (you can always use objc interop for this)
  
 ## Discuss
  
@@ -60,7 +54,7 @@ A clojure compiler that targets objc runtimes.
  
 ## How to build dist
  
- ./build.sh # (this takes a lot of time)
+ ./build.sh
 
 --------------------------------------------------------------------------
 
