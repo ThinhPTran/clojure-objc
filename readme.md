@@ -2,16 +2,13 @@
 
 WARNING! THIS IS AN ALPHA RELEASE
 
-clojure-objc is a clojure compiler that generates java(instead of bytecode) and uses j2objc(https://code.google.com/p/j2objc/) to translate it to objc.
-The runtime sourcebase is also modified to use only j2objc's jre emulated classes(https://code.google.com/p/j2objc/wiki/JreEmulation).
-
-clojure.core and the runtime have a few tweaks to work faster on the objc runtime. But everything works with no modifications.
+A clojure compiler that targets objc runtimes.
 
 ## Downloads
 
 ### Download clojure-objc 1.5.1-1 static lib and headers
   
-  https://www.dropbox.com/s/19r4n24lu8t4utv/clojure-objc-1.5.1-1.zip
+  [clojure-objc-1.5.1-1](https://www.dropbox.com/s/19r4n24lu8t4utv/clojure-objc-1.5.1-1.zip)
   
 ## Dependency
  
@@ -19,7 +16,7 @@ clojure.core and the runtime have a few tweaks to work faster on the objc runtim
   
 ### Download j2objc 0.8.8 with arm64 support (not available in official site)
 
-  https://docs.google.com/file/d/0B34oZK3UpQolb1UzcGt5cFcxbXM/edit
+  [j2objc 0.8.8](https://docs.google.com/file/d/0B34oZK3UpQolb1UzcGt5cFcxbXM/edit)
 
 ## Where to start
  
@@ -47,53 +44,6 @@ clojure.core and the runtime have a few tweaks to work faster on the objc runtim
             :delegate nil
             :cancelButtonTitle "Cancelar"
             :otherButtonTitles nil) :show))
-            
-## nsproxy EXPERIMENTAL!
-    
-    nsproxy doesn't require a base class.
-    
-    ; If you need a UITextFieldDelegate
-    (nsproxy
-      ([:bool :textFieldShouldReturn :id field]
-        ($ field :resignFirstResponder) 
-        true))
-        
-    ; nsproxy with a base class
-    (nsproxy UIView
-      ([:void :dealloc]
-        (println "dealloc!"))
-        
-### Gotchas
-  
-  Do not proxy a class containing a struct, like UIViewController. 
-  More information:
-  http://stackoverflow.com/questions/17927639/adding-a-root-view-controller-ocmockobjectuiviewcontroller-as-a-child-view-con
-        
-### nsproxy supported types
-
-    :float
-    :long-long
-    :long
-    :char
-    :short
-    :int
-    :double
-    :unsigned-long-long
-    :unsigned-long
-    :unsigned-char
-    :unsigned-short
-    :unsigned-int
-    :bool
-    :CGPoint
-    :NSRange
-    :UIEdgeInsets
-    :CGSize
-    :CGAffineTransform
-    :CATransform3D
-    :UIOffset
-    :CGRect
-    :id
-    :void
 
 ## What doesn't work (yet)
  
