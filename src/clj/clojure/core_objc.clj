@@ -81,7 +81,7 @@
    :nsrange \N
    :uiedge \E
    :cgsize \Z
-   :cgafflinetransform \A
+   :cgaffinetransform \A
    :catransform3d \T
    :uioffset \O
    :cgrect \R
