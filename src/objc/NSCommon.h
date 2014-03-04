@@ -56,21 +56,16 @@ static const char cgpoint_type = 'P';
 static const char nsrange_type = 'N';
 static const char uiedge_type = 'E';
 static const char cgsize_type = 'Z';
-static const char cgafflinetransform_type = 'A';
+static const char cgaffinetransform_type = 'A';
 static const char catransform3d_type = 'T';
 static const char uioffset_type = 'O';
 static const char cgrect_type = 'R';
 static const char id_type = 'p';
 static const char pointer_type = 'Y';
 
-#define reg_c(f) \
-    [NSCommon registerCFunction:@ #f fn:f];\
-
 @interface NSCommon : NSObject
 
 +(BOOL)cgfloatIsDouble;
-
-+(void)registerCFunction:(NSString*)name fn:(void*)fn;
 
 +(id)ccall:(id)name types:(id)types args:(id)args;
 

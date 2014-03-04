@@ -65,7 +65,7 @@ static ClojureLangAtom *dynamicClasses;
             case nsrange_type: va_arg_p(NSRange)\
             case uiedge_type: va_arg_p(UIEdgeInsets)\
             case cgsize_type: va_arg_p(CGSize)\
-            case cgafflinetransform_type: va_arg_p(CGAffineTransform)\
+            case cgaffinetransform_type: va_arg_p(CGAffineTransform)\
             case catransform3d_type: va_arg_p(CATransform3D)\
             case uioffset_type: va_arg_p(UIOffset)\
             case cgrect_type: va_arg_p(CGRect)\

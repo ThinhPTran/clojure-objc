@@ -26,8 +26,7 @@
 #import "objc/message.h"
 #import <UIKit/UIKit.h>
 #import "WeakRef.h"
-
-static ClojureLangAtom *publiccfunctions;
+#import <dlfcn.h>
 
 static id cons;
 static id conj;
@@ -114,7 +113,7 @@ const char* encode_type(char d) {
         case nsrange_type: return @encode(NSRange);
         case uiedge_type: return @encode(UIEdgeInsets);
         case cgsize_type: return @encode(CGSize);
-        case cgafflinetransform_type: return @encode(CGAffineTransform);
+        case cgaffinetransform_type: return @encode(CGAffineTransform);
         case catransform3d_type: return @encode(CATransform3D);
         case uioffset_type: return @encode(UIOffset);
         case cgrect_type: return @encode(CGRect);
@@ -143,7 +142,7 @@ void * ffi_type_for_type(char type) {
         case nsrange_type: return &NSRangeFFI;
         case uiedge_type: return &UIEdgeInsetsFFI;
         case cgsize_type: return &CGSizeFFI;
-        case cgafflinetransform_type: return &CGAffineTransformFFI;
+        case cgaffinetransform_type: return &CGAffineTransformFFI;
         case catransform3d_type: return &CATransform3DFFI;
         case uioffset_type: return &UIOffsetFFI;
         case cgrect_type: return &CGRectFFI;
@@ -171,7 +170,7 @@ int sizeof_type(char c) {
         case nsrange_type: return sizeof(NSRange);
         case uiedge_type: return sizeof(UIEdgeInsets);
         case cgsize_type: return sizeof(CGSize);
-        case cgafflinetransform_type: return sizeof(CGAffineTransform);
+        case cgaffinetransform_type: return sizeof(CGAffineTransform);
         case catransform3d_type: return sizeof(CATransform3D);
         case uioffset_type: return sizeof(UIOffset);
         case cgrect_type: return sizeof(CGRect);
@@ -218,31 +217,6 @@ BOOL use_stret(id object, NSString* selector) {
     assoc = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"assoc"];
     cons = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"cons"];
     conj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
-    publiccfunctions = [[ClojureLangAtom alloc] initWithId:[ClojureLangPersistentHashMap EMPTY]];
-    
-    // Register main functions
-    reg_c(objc_msgSend);
-    reg_c(objc_msgSendSuper);
-#ifndef __arm64__
-    reg_c(objc_msgSend_stret);
-    reg_c(objc_msgSendSuper_stret);
-#endif
-    reg_c(NSStringFromClass);
-    reg_c(NSSelectorFromString);
-    reg_c(NSClassFromString);
-    reg_c(printf);
-    reg_c(NSLog);
-    reg_c(CGRectMake);
-    reg_c(CGSizeMake);
-    reg_c(CGPointMake);
-    reg_c(objc_getAssociatedObject);
-    reg_c(objc_setAssociatedObject);
-}
-
-+(void)registerCFunction:(NSString*)name fn:(void*)fn {
-    [publiccfunctions swapWithClojureLangIFn:assoc
-                                      withId:name
-                                      withId:[NSValue valueWithPointer:FFI_FN(fn)]];
 }
 
 #define make_pointer(e,type)\
@@ -344,7 +318,7 @@ BOOL use_stret(id object, NSString* selector) {
                 make_pointer([((NSValue*) v) CGSizeValue], CGSize);
                 break;
             }
-            case cgafflinetransform_type: {
+            case cgaffinetransform_type: {
                 make_pointer([((NSValue*) v) CGAffineTransformValue], CGAffineTransform);
                 break;
             }
@@ -376,10 +350,7 @@ BOOL use_stret(id object, NSString* selector) {
     ffim_type *result_type = ffi_type_for_type(retType);
     int status = ffi_mini_prep_cif(&c, FFIM_DEFAULT_ABI, (unsigned int) count, result_type, argument_types);
     
-    void *fn = [(NSValue*)[ClojureLangRT getWithId:[publiccfunctions deref] withId:name] pointerValue];
-    if (fn == nil) {
-        @throw [[NSException alloc] initWithName:@"Function not registered. Register with: reg_c({function});" reason:name userInfo:nil];
-    }
+    void *fn = dlsym(RTLD_DEFAULT, [name UTF8String]);
     ffi_mini_call(&c, fn, result_value, argument_values);
 
     for (int n=0; n < count; n++) {
@@ -483,7 +454,7 @@ BOOL use_stret(id object, NSString* selector) {
             result = [NSValue valueWithCGSize:v];
             break;
         }
-        case cgafflinetransform_type: {
+        case cgaffinetransform_type: {
             CGAffineTransform v = *(CGAffineTransform*)result_value;
             result = [NSValue valueWithCGAffineTransform:v];
             break;
@@ -641,7 +612,7 @@ BOOL use_stret(id object, NSString* selector) {
                 val = [NSValue valueWithCGSize:v];
                 break;
             }
-            case cgafflinetransform_type: {
+            case cgaffinetransform_type: {
                 CGAffineTransform v;
                 [invocation getArgument:&v atIndex: j];
                 val = [NSValue valueWithCGAffineTransform:v];
@@ -775,7 +746,7 @@ BOOL use_stret(id object, NSString* selector) {
             ret = &o;
             break;
         }
-        case cgafflinetransform_type: {
+        case cgaffinetransform_type: {
             CGAffineTransform o = [((NSValue*) v) CGAffineTransformValue];
             ret = &o;
             break;
@@ -862,7 +833,7 @@ BOOL use_stret(id object, NSString* selector) {
             } else if (strcmp(c, @encode(CGSize)) == 0) {
                 return  cgsize_type;
             } else if (strcmp(c, @encode(CGAffineTransform)) == 0) {
-                return cgafflinetransform_type;
+                return cgaffinetransform_type;
             } else if (strcmp(c, @encode(CATransform3D)) == 0) {
                 return catransform3d_type;
             } else if (strcmp(c, @encode(UIOffset)) == 0) {
