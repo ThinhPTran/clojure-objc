@@ -151,6 +151,9 @@ public static Var internPrivate(String nsName, String sym){
 	Namespace ns = Namespace.findOrCreate(Symbol.intern(nsName));
 	Var ret = intern(ns, Symbol.intern(sym));
 	ret.setMeta(privateMeta);
+	if (!ret.isBound()) {
+	  ret = Compiler.maybeLoadVar(nsName + "/" + sym);
+	}
 	return ret;
 }
 

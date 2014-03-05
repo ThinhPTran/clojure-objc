@@ -269,6 +269,14 @@ public class Compiler implements Opcodes {
   static final public Var COMPILE_PATH = Var.intern(
       Namespace.findOrCreate(Symbol.intern("clojure.core")),
       Symbol.intern("*compile-path*"), null).setDynamic();
+  
+  static final public Var FORCE_LOAD = Var.intern(
+      Namespace.findOrCreate(Symbol.intern("clojure.core")),
+      Symbol.intern("*force-load*"), "true".equals(System.getenv("FORCE_LOAD"))).setDynamic();
+  
+  static final public Var RUNTIME = Var.intern(
+      Namespace.findOrCreate(Symbol.intern("clojure.core")),
+      Symbol.intern("*runtime*"), "true".equals(System.getenv("RUNTIME"))).setDynamic();
 
   // String
   static final public Var SOURCE_GEN_PATH = Var.intern(
@@ -575,6 +583,7 @@ public class Compiler implements Opcodes {
           return wrap(context, constant);
         }
       } else {
+        gen.push(""); // TODO nil
         return "";
       }
     }
@@ -4739,7 +4748,7 @@ public class Compiler implements Opcodes {
         clinitgen.invokeVirtual(VAR_TYPE, bindRoot2Method);
         clinitgen.pop();
 
-        if (COMPILE_PATH.deref() != null) {
+        if (COMPILE_PATH.deref() != null || (Boolean)FORCE_LOAD.deref()) {
           fnVarMap = fnVarMap.assoc(var, packageName + "." + className);
         }
         emitSource("VAR.bindRoot2(new " + packageName + "." + className + "())"
@@ -7766,6 +7775,17 @@ public class Compiler implements Opcodes {
     }
   }
 
+  public static Var maybeLoadVar(String ns_sym){
+    try {
+      Class c = Class.forName(clojure.lang.Compiler.munge(ns_sym.replaceAll("/",
+          "_")));
+      return (Var) c.getDeclaredField("VAR").get(null);      
+    } catch (Exception e) {
+      int i = ns_sym.indexOf("/");
+      return RT.var(ns_sym.substring(0, i), ns_sym.substring(i + 1));
+    }
+  }
+  
   static public Object maybeResolveIn(Namespace n, Symbol sym) {
     // note - ns-qualified vars must already exist
     if (sym.ns != null) {

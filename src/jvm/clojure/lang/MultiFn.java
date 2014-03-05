@@ -33,6 +33,10 @@ public class MultiFn extends AFn {
 
   public MultiFn(String name, IFn dispatchFn, Object defaultDispatchVal,
       IRef hierarchy) {
+    Compiler.maybeLoadVar("clojure.core/assoc");
+    Compiler.maybeLoadVar("clojure.core/dissoc");
+    Compiler.maybeLoadVar("clojure.core/isa?");
+    Compiler.maybeLoadVar("clojure.core/parents");
     this.rw = new ReentrantReadWriteLock();
     this.name = name;
     this.dispatchFn = dispatchFn;

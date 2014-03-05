@@ -3895,7 +3895,7 @@
   clashes. Use :use in the ns macro in preference to calling this directly."
   {:added "1.0"}
   [ns-sym & filters]
-  (when-not clojure.lang.ObjC/objc
+  (when-not (or *runtime* clojure.lang.ObjC/objc)
     (let [ns (or (find-ns ns-sym) (throw (new Exception (str "No namespace: " ns-sym))))
           fs (apply hash-map filters)
           nspublics (ns-publics ns)

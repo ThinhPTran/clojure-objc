@@ -325,7 +325,6 @@ public class RT {
   }
 
   static AtomicInteger id = new AtomicInteger(1);
-  public static boolean forceClass = false;
 
   static public void addURL(Object url) throws MalformedURLException {
     URL u = (url instanceof String) ? (new URL((String) url)) : (URL) url;
@@ -530,16 +529,13 @@ public class RT {
       URL cljURL = getResource(baseLoader(), cljfile);
       boolean loaded = false;
 
-      if (forceClass
-          || (classURL != null && (cljURL == null || lastModified(classURL,
-              classfile) >= lastModified(cljURL, cljfile)))) { // || classURL ==
-                                                               // null ?
+      if (!(Boolean)Compiler.FORCE_LOAD.deref() && classURL != null) {
         try {
           Var.pushThreadBindings(RT.mapUniqueKeys(CURRENT_NS,
               CURRENT_NS.deref(), WARN_ON_REFLECTION,
               WARN_ON_REFLECTION.deref(), RT.UNCHECKED_MATH,
               RT.UNCHECKED_MATH.deref()));
-          // System.out.println("Loading class " + classURL);
+//           System.out.println("Loading class " + classURL);
           loaded = (loadClassForName(scriptbase.replace('/', '.')
               + LOADER_SUFFIX) != null);
         } catch (Exception e) {
@@ -551,7 +547,7 @@ public class RT {
       // boolean runtime = Boolean.TRUE.equals(Compiler.RUNTIME.deref());
       // runtime ||
       if ((!loaded && cljURL != null)) {
-        // System.out.println("Loading script " + scriptbase);
+//         System.out.println("Loading script " + scriptbase);
         if (booleanCast(Compiler.COMPILE_FILES.deref()))
           compile(cljfile);
         else
