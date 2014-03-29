@@ -3915,7 +3915,7 @@
         (when-not (exclude sym)
           (let [v (nspublics sym)]
             (when-not v
-              (throw (new java.lang.Exception ;IllegalAccessError
+              (throw (new java.lang.RuntimeException ;IllegalAccessError
                           (if (get (ns-interns ns) sym)
                             (str sym " is not public")
                             (str sym " does not exist")))))

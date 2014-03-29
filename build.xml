@@ -70,13 +70,14 @@
       <arg value="clojure.string"/>
       <arg value="clojure.data"/>
       <arg value="clojure.remoterepl" />
-      <!--arg value="clojure.inspector"/-->
-      <!--arg value="clojure.repl"/-->
-      <!--arg value="clojure.java.browse"/-->
-      <!--arg value="clojure.java.javadoc"/-->
-      <!--arg value="clojure.java.shell"/-->
-      <!--arg value="clojure.java.browse-ui"/-->
-      <!--arg value="clojure.reflect" /-->
+    	
+      <!--arg value="clojure.inspector"/>
+      <arg value="clojure.repl"/>
+      <arg value="clojure.java.browse"/>
+      <arg value="clojure.java.javadoc"/>
+      <arg value="clojure.java.shell"/>
+      <arg value="clojure.java.browse-ui"/>
+      <arg value="clojure.reflect" /-->
     </java>
   </target>
 
@@ -93,9 +94,9 @@
       <sysproperty key="clojure.compile.path" value="${test-classes}"/>
         <!--<sysproperty key="clojure.compiler.elide-meta" value="[:doc]"/>-->
         <!--<sysproperty key="clojure.compiler.disable-locals-clearing" value="true"/>-->
-    	<arg value="clojure.test-clojure.reducers" />
       <arg value="clojure.test-clojure.protocols.examples" />
       <arg value="clojure.test-clojure.genclass.examples" />
+    	<!--arg value="clojure.test-clojure.reducers" />
       <arg value="clojure.test-clojure.annotations" />
       <arg value="clojure.test-clojure.agents" />
       <arg value="clojure.test-clojure.control" />
@@ -136,7 +137,7 @@
       <arg value="clojure.test-clojure.fn" />
       <arg value="clojure.test-clojure.printer" />
       <arg value="clojure.test-clojure.sequences" />
-      <arg value="clojure.test-clojure.for" />
+      <arg value="clojure.test-clojure.for" /-->
     </java>
   </target>
 

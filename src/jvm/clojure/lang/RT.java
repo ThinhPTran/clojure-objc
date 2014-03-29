@@ -488,7 +488,7 @@ static public int nextID(){
 
 // Load a library in the System ClassLoader instead of Clojure's own.
 public static void loadLibrary(String libname){
-    System.loadLibrary(libname);
+  Reflector.invokeStaticMethod(System.class, "loadLibrary", new Object[]{libname});
 }
 
 

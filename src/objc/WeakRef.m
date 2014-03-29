@@ -12,16 +12,8 @@
 #import "clojure/lang/PersistentHashMap.h"
 #import "clojure/lang/Atom.h"
 
-static ClojureLangAtom *map;
-static ClojureLangVar *assoc;
-
 @implementation WeakRef {
     NSValue *val;
-}
-
-+(void)initialize {
-    map = [[ClojureLangAtom alloc] initWithId:[ClojureLangPersistentHashMap EMPTY]];
-    assoc = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"assoc"];
 }
 
 -(id)initWith:(id)o {
@@ -37,12 +29,7 @@ static ClojureLangVar *assoc;
 }
 
 +(WeakRef*)from:(id)o {
-    id e = [[map deref] valAtWithId:o];
-    if (e == nil) {
-        e = [[WeakRef alloc] initWith:o];
-        [map swapWithClojureLangIFn:[assoc getRawRoot] withId:o withId:e];
-    }
-    return e;
+    return [[WeakRef alloc] initWith:o];
 }
 
 - (BOOL)isEqual:(id)f {

@@ -199,7 +199,7 @@ IMP getDispatch(char c) {
         case nsrange_type: return (IMP)dispatch_NSRange;
         case uiedge_type: return (IMP)dispatch_UIEdgeInsets;
         case cgsize_type: return (IMP)dispatch_CGSize;
-        case cgafflinetransform_type: return (IMP)dispatch_CGAffineTransform;
+        case cgaffinetransform_type: return (IMP)dispatch_CGAffineTransform;
         case catransform3d_type: return (IMP)dispatch_CATransform3D;
         case uioffset_type: return (IMP)dispatch_UIOffset;
         case cgrect_type: return (IMP)dispatch_CGRect;

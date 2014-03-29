@@ -6,12 +6,12 @@
 ;   the terms of this license.
 ;   You must not remove this notice, or any other, from this software.
 
-(ns
+(ns 
   ^{:author "Stuart Sierra, Chas Emerick, Stuart Halloway",
      :doc "This file defines polymorphic I/O utility functions for Clojure."}
     clojure.java.io
     (:require clojure.string)
-    (:import
+    (:import 
      (java.io Reader InputStream InputStreamReader PushbackReader
               BufferedReader File OutputStream
               OutputStreamWriter BufferedWriter Writer
@@ -37,7 +37,6 @@
   (^{:tag java.io.File, :added "1.2"} as-file [x] "Coerce argument to a file.")
   (^{:tag java.net.URL, :added "1.2"} as-url [x] "Coerce argument to a URL."))
 
-; objc?
 (defn- escaped-utf8-urlstring->str [s]
   (-> (clojure.string/replace s "+" (URLEncoder/encode "+" "UTF-8"))
       (URLDecoder/decode "UTF-8")))
@@ -46,15 +45,14 @@
   nil
   (as-file [_] nil)
   (as-url [_] nil)
-
+  
   String
   (as-file [s] (File. s))
-  (as-url [s] (URL. s))
-
+  (as-url [s] (URL. s))  
+  
   File
   (as-file [f] f)
-  (as-url [f] ;(.toURL (.toURI f))
-          )
+  (as-url [f] (.toURL (.toURI f)))
 
   URL
   (as-url [u] u)
@@ -62,12 +60,10 @@
     (if (= "file" (.getProtocol u))
       (as-file (escaped-utf8-urlstring->str
                 (.replace (.getFile u) \/ File/separatorChar)))
-      (throw (IllegalArgumentException. (str "Not a file: " u))))
-           )
+      (throw (IllegalArgumentException. (str "Not a file: " u)))))
 
   URI
-  (as-url [u] (.toURL u)
-          )
+  (as-url [u] (.toURL u))
   (as-file [u] (as-file (as-url u))))
 
 (defprotocol ^{:added "1.2"} IOFactory
@@ -76,7 +72,7 @@
    be unequivocally converted to the requested kind of stream.
 
    Common options include
-
+   
      :append    true to open stream in append mode
      :encoding  string name of encoding to use, e.g. \"UTF-8\".
 
@@ -345,7 +341,6 @@
   (with-open [in (FileInputStream. input)]
     (do-copy in output opts)))
 
-(comment
 (defmethod do-copy [File File] [^File input ^File output opts]
   (with-open [in (-> input FileInputStream. .getChannel)
               out (-> output FileOutputStream. .getChannel)]
@@ -355,7 +350,6 @@
               pos (+ pos bytes-xferred)]
           (when (< pos sz)
             (recur pos)))))))
-)
 
 (defmethod do-copy [String OutputStream] [^String input ^OutputStream output opts]
   (do-copy (StringReader. input) output opts))
@@ -393,9 +387,9 @@
 
     :buffer-size  buffer size to use, default is 1024.
     :encoding     encoding to use if converting between
-                  byte and char streams.
+                  byte and char streams.   
 
-  Does not close any streams except those it opens itself
+  Does not close any streams except those it opens itself 
   (on a File)."
   {:added "1.2"}
   [input output & opts]
@@ -416,9 +410,9 @@
    versions treat the first argument as parent and subsequent args as
    children relative to the parent."
   {:added "1.2"}
-  ([arg]
+  ([arg]                      
      (as-file arg))
-  ([parent child]
+  ([parent child]             
      (File. ^File (as-file parent) ^String (as-relative-path child)))
   ([parent child & more]
      (reduce file (file parent child) more)))

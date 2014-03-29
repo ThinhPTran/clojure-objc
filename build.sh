@@ -1,12 +1,12 @@
-mvn clean
-mvn compile
-mvn test-compile
-rm -Rf target/objc
-mkdir target/objc
+#mvn clean
+#mvn compile
+#mvn test-compile
+#rm -Rf target/objc
+#mkdir target/objc
 cp -R src/objc/. target/objc
 cp -R src/ffi/. target/objc
-zip -r target/objc.jar target/gen src/jvm test/java
-j2objc -d target/objc -classpath target/classes:target/test-classes target/objc.jar
+#zip -r target/objc.jar target/gen src/jvm test/java
+#j2objc -d target/objc -classpath target/classes:target/test-classes target/objc.jar
 
 if [ ! -d "target/include" ]; then
 	mkdir target/include
@@ -20,8 +20,8 @@ cd ..
 echo building static lib...
 
 OBJC=$(pwd)/objc
-IPHONEOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
-IPHONESIMULATOR_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.0.sdk"
+IPHONEOS_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.1.sdk"
+IPHONESIMULATOR_SDK="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.1.sdk"
 FRAMEWORKS="-framework UIKit -framework Foundation"
 INCLUDES="-I$J2OBJC_HOME/include -I$(pwd)/objc -I$(pwd)/../src/ffi"
 OPTS="-miphoneos-version-min=5.0 -fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -O0 -DDEBUG=1 -fstrict-aliasing -Wno-unsequenced -MT dependencies"
