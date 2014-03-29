@@ -1102,7 +1102,8 @@ public class Compiler implements Opcodes {
             return new StaticFieldExpr(line, column, c, munge(sym.name), tag);
           } else
             return new InstanceFieldExpr(line, column, instance,
-                munge(sym.name), tag);
+                munge(sym.name), tag,
+                (((Symbol) RT.third(form)).name.charAt(0) == '-'));
         } else {
           ISeq call = (ISeq) ((RT.third(form) instanceof ISeq) ? RT.third(form)
               : RT.next(RT.next(form)));
@@ -1232,13 +1233,14 @@ public class Compiler implements Opcodes {
     public final int line;
     public final int column;
     public final Symbol tag;
+    public final boolean requireField;
     final static Method invokeNoArgInstanceMember = Method
-        .getMethod("Object invokeNoArgInstanceMember(Object,String)");
+        .getMethod("Object invokeNoArgInstanceMember(Object,String,boolean)");
     final static Method setInstanceFieldMethod = Method
         .getMethod("Object setInstanceField(Object,String,Object)");
 
     public InstanceFieldExpr(int line, int column, Expr target,
-        String fieldName, Symbol tag) {
+        String fieldName, Symbol tag, boolean requireField) {
       this.target = target;
       this.targetClass = target.hasJavaClass() ? target.getJavaClass() : null;
       this.field = targetClass != null ? Reflector.getField(targetClass,
@@ -1247,6 +1249,7 @@ public class Compiler implements Opcodes {
       this.line = line;
       this.column = column;
       this.tag = tag;
+      this.requireField = requireField;
       if (field == null && RT.booleanCast(RT.WARN_ON_REFLECTION.deref())) {
         if (targetClass == null) {
           RT.errPrintWriter()
@@ -1264,7 +1267,8 @@ public class Compiler implements Opcodes {
     }
 
     public Object eval() {
-      return Reflector.invokeNoArgInstanceMember(target.eval(), fieldName);
+      return Reflector.invokeNoArgInstanceMember(target.eval(), fieldName,
+          requireField);
     }
 
     public boolean canEmitPrimitive() {
@@ -1306,6 +1310,7 @@ public class Compiler implements Opcodes {
       } else {
         String t = target.emit(C.EXPRESSION, objx, gen);
         gen.push(fieldName);
+        gen.push(requireField);
         gen.invokeStatic(REFLECTOR_TYPE, invokeNoArgInstanceMember);
         if (context == C.STATEMENT)
           gen.pop();
@@ -1866,9 +1871,11 @@ public class Compiler implements Opcodes {
         if (argsList.size() == 1) {
           return wrap(context, op + argsList.get(0));
         } else if (argsList.size() == 2) {
-          return wrap(context, argsList.get(0) + " " + op + " " + argsList.get(1));
+          return wrap(context,
+              argsList.get(0) + " " + op + " " + argsList.get(1));
         }
-        throw new RuntimeException("Error emiting intrinsics: " + op + " with " + argsList);
+        throw new RuntimeException("Error emiting intrinsics: " + op + " with "
+            + argsList);
       } else
         throw new UnsupportedOperationException(
             "Unboxed emit of unknown member");
@@ -2104,7 +2111,14 @@ public class Compiler implements Opcodes {
     }
 
     public Class getJavaClass() {
-      return v.getClass();
+      if (v instanceof APersistentMap)
+        return APersistentMap.class;
+      else if (v instanceof APersistentSet)
+        return APersistentSet.class;
+      else if (v instanceof APersistentVector)
+        return APersistentVector.class;
+      else
+        return v.getClass();
       // throw new IllegalArgumentException("Has no Java class");
     }
 
@@ -6744,6 +6758,11 @@ public class Compiler implements Opcodes {
           method.locals = backupMethodLocals;
           method.indexlocals = backupMethodIndexLocals;
 
+          PathNode looproot = new PathNode(PATHTYPE.PATH,
+              (PathNode) CLEAR_PATH.get());
+          PathNode clearroot = new PathNode(PATHTYPE.PATH, looproot);
+          PathNode clearpath = new PathNode(PATHTYPE.PATH, looproot);
+
           if (isLoop)
             dynamicBindings = dynamicBindings.assoc(LOOP_LOCALS, null);
 
@@ -6776,12 +6795,21 @@ public class Compiler implements Opcodes {
                       "doubleCast", RT.vector(init));
               }
               // sequential enhancement of env (like Lisp let*)
-              LocalBinding lb = registerLocal(sym, tagOf(sym), init, false);
-              BindingInit bi = new BindingInit(lb, init);
-              bindingInits = bindingInits.cons(bi);
 
-              if (isLoop)
-                loopLocals = loopLocals.cons(lb);
+              try {
+                if (isLoop) {
+                  Var.pushThreadBindings(RT.map(CLEAR_PATH, clearpath,
+                      CLEAR_ROOT, clearroot, NO_RECUR, null));
+                }
+                LocalBinding lb = registerLocal(sym, tagOf(sym), init, false);
+                BindingInit bi = new BindingInit(lb, init);
+                bindingInits = bindingInits.cons(bi);
+                if (isLoop)
+                  loopLocals = loopLocals.cons(lb);
+              } finally {
+                if (isLoop)
+                  Var.popThreadBindings();
+              }
             }
             if (isLoop)
               LOOP_LOCALS.set(loopLocals);
@@ -6789,12 +6817,8 @@ public class Compiler implements Opcodes {
             boolean moreMismatches = false;
             try {
               if (isLoop) {
-                PathNode root = new PathNode(PATHTYPE.PATH,
-                    (PathNode) CLEAR_PATH.get());
-                Var.pushThreadBindings(RT.map(CLEAR_PATH, new PathNode(
-                    PATHTYPE.PATH, root), CLEAR_ROOT, new PathNode(
-                    PATHTYPE.PATH, root), NO_RECUR, null));
-
+                Var.pushThreadBindings(RT.map(CLEAR_PATH, clearpath,
+                    CLEAR_ROOT, clearroot, NO_RECUR, null));
               }
               bodyExpr = (new BodyExpr.Parser()).parse(isLoop ? C.RETURN
                   : context, body);

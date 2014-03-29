@@ -53,6 +53,8 @@ public class RT {
                                                 // "t"));
 
   static final public String LOADER_SUFFIX = "__init";
+  
+  static AtomicInteger id = new AtomicInteger(1);
 
   // simple-symbol->class
   final static IPersistentMap DEFAULT_IMPORTS = map(
@@ -324,18 +326,7 @@ public class RT {
     }
   }
 
-  static AtomicInteger id = new AtomicInteger(1);
   public static boolean forceClass = false;
-
-  static public void addURL(Object url) throws MalformedURLException {
-    URL u = (url instanceof String) ? (new URL((String) url)) : (URL) url;
-    ClassLoader ccl = Thread.currentThread().getContextClassLoader();
-    if (ccl instanceof DynamicClassLoader)
-      ((DynamicClassLoader) ccl).addURL(u);
-    else
-      throw new IllegalAccessError(
-          "Context classloader is not a DynamicClassLoader");
-  }
 
   static {
     Keyword arglistskw = Keyword.intern(null, "arglists");
@@ -374,10 +365,6 @@ public class RT {
     }
   }
 
-  static public Keyword keyword(String ns, String name) {
-    return Keyword.intern((Symbol.intern(ns, name)));
-  }
-
   private static void doInit() {
     try {
       if (!ObjC.objc) {
@@ -403,6 +390,440 @@ public class RT {
     }
   }
 
+static public void addURL(Object url) throws MalformedURLException{
+	URL u = (url instanceof String) ? (new URL((String) url)) : (URL) url;
+	ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+	if(ccl instanceof DynamicClassLoader)
+		((DynamicClassLoader)ccl).addURL(u);
+	else
+		throw new IllegalAccessError("Context classloader is not a DynamicClassLoader");
+}
+
+static public Keyword keyword(String ns, String name){
+	return Keyword.intern((Symbol.intern(ns, name)));
+}
+
+static public Var var(String ns, String name){
+	return Var.intern(Namespace.findOrCreate(Symbol.intern(null, ns)), Symbol.intern(null, name));
+}
+
+static public Var var(String ns, String name, Object init){
+	return Var.intern(Namespace.findOrCreate(Symbol.intern(null, ns)), Symbol.intern(null, name), init);
+}
+
+public static void loadResourceScript(String name) throws IOException{
+	loadResourceScript(name, true);
+}
+
+public static void maybeLoadResourceScript(String name) throws IOException{
+	loadResourceScript(name, false);
+}
+
+public static void loadResourceScript(String name, boolean failIfNotFound) throws IOException{
+	loadResourceScript(RT.class, name, failIfNotFound);
+}
+
+public static void loadResourceScript(Class c, String name) throws IOException{
+	loadResourceScript(c, name, true);
+}
+
+public static void loadResourceScript(Class c, String name, boolean failIfNotFound) throws IOException{
+	int slash = name.lastIndexOf('/');
+	String file = slash >= 0 ? name.substring(slash + 1) : name;
+	InputStream ins = resourceAsStream(baseLoader(), name);
+	if(ins != null) {
+		try {
+			Compiler.load(new InputStreamReader(ins, UTF8), name, file);
+		}
+		finally {
+			ins.close();
+		}
+	}
+	else if(failIfNotFound) {
+		throw new FileNotFoundException("Could not locate Clojure resource on classpath: " + name);
+	}
+}
+
+static public void init() {
+	RT.errPrintWriter().println("No need to call RT.init() anymore");
+}
+
+static public long lastModified(URL url, String libfile) throws IOException{
+  if (url.getProtocol().equals("jar")) {
+    return (Long) Reflector.invokeInstanceMethod(Reflector
+        .invokeInstanceMethod(Reflector.invokeInstanceMethod(Reflector
+            .invokeInstanceMethod(url, "openConnection", new Object[0]),
+            "getJarFile", new Object[0]), "getEntry",
+            new Object[] { libfile }), "getTime", new Object[0]);
+  } else {
+    return (Long) Reflector.invokeInstanceMethod(
+        Reflector.invokeInstanceMethod(url, "openConnection", new Object[0]),
+        "getLastModified", new Object[0]);
+  }
+}
+
+static void compile(String cljfile) throws IOException{
+        InputStream ins = resourceAsStream(baseLoader(), cljfile);
+	if(ins != null) {
+		try {
+			Compiler.compile(new InputStreamReader(ins, UTF8), cljfile,
+			                 cljfile.substring(1 + cljfile.lastIndexOf("/")));
+		}
+		finally {
+			ins.close();
+		}
+
+	}
+	else
+		throw new FileNotFoundException("Could not locate Clojure resource on classpath: " + cljfile);
+}
+
+static public void load(String scriptbase) throws IOException, ClassNotFoundException{
+	load(scriptbase, true);
+}
+
+static public int nextID(){
+	return id.getAndIncrement();
+}
+
+// Load a library in the System ClassLoader instead of Clojure's own.
+public static void loadLibrary(String libname){
+    System.loadLibrary(libname);
+}
+
+
+////////////// Collections support /////////////////////////////////
+
+static public ISeq seq(Object coll){
+	if(coll instanceof ASeq)
+		return (ASeq) coll;
+	else if(coll instanceof LazySeq)
+		return ((LazySeq) coll).seq();
+	else
+		return seqFrom(coll);
+}
+
+static ISeq seqFrom(Object coll){
+	if(coll instanceof Seqable)
+		return ((Seqable) coll).seq();
+	else if(coll == null)
+		return null;
+	else if(coll instanceof Iterable)
+		return IteratorSeq.create(((Iterable) coll).iterator());
+	else if(coll.getClass().isArray())
+		return ArraySeq.createFromObject(coll);
+	else if(coll instanceof CharSequence)
+		return StringSeq.create((CharSequence) coll);
+	else if(coll instanceof Map)
+		return seq(((Map) coll).entrySet());
+	else {
+		Class c = coll.getClass();
+		Class sc = c.getSuperclass();
+		throw new IllegalArgumentException("Don't know how to create ISeq from: " + c.getName());
+	}
+}
+
+static public Object seqOrElse(Object o) {
+	return seq(o) == null ? null : o;
+}
+
+static public ISeq keys(Object coll){
+	return APersistentMap.KeySeq.create(seq(coll));
+}
+
+static public ISeq vals(Object coll){
+	return APersistentMap.ValSeq.create(seq(coll));
+}
+
+static public IPersistentMap meta(Object x){
+	if(x instanceof IMeta)
+		return ((IMeta) x).meta();
+	return null;
+}
+
+public static int count(Object o){
+	if(o instanceof Counted)
+		return ((Counted) o).count();
+	return countFrom(Util.ret1(o, o = null));
+}
+
+static int countFrom(Object o){
+	if(o == null)
+		return 0;
+	else if(o instanceof IPersistentCollection) {
+		ISeq s = seq(o);
+		o = null;
+		int i = 0;
+		for(; s != null; s = s.next()) {
+			if(s instanceof Counted)
+				return i + s.count();
+			i++;
+		}
+		return i;
+	}
+	else if(o instanceof CharSequence)
+		return ((CharSequence) o).length();
+	else if(o instanceof Collection)
+		return ((Collection) o).size();
+	else if(o instanceof Map)
+		return ((Map) o).size();
+	else if(o.getClass().isArray())
+		return Array.getLength(o);
+
+	throw new UnsupportedOperationException("count not supported on this type: " + o.getClass().getSimpleName());
+}
+
+static public IPersistentCollection conj(IPersistentCollection coll, Object x){
+	if(coll == null)
+		return new PersistentList(x);
+	return coll.cons(x);
+}
+
+static public ISeq cons(Object x, Object coll){
+	//ISeq y = seq(coll);
+	if(coll == null)
+		return new PersistentList(x);
+	else if(coll instanceof ISeq)
+		return new Cons(x, (ISeq) coll);
+	else
+		return new Cons(x, seq(coll));
+}
+
+static public Object first(Object x){
+	if(x instanceof ISeq)
+		return ((ISeq) x).first();
+	ISeq seq = seq(x);
+	if(seq == null)
+		return null;
+	return seq.first();
+}
+
+static public Object second(Object x){
+	return first(next(x));
+}
+
+static public Object third(Object x){
+	return first(next(next(x)));
+}
+
+static public Object fourth(Object x){
+	return first(next(next(next(x))));
+}
+
+static public ISeq next(Object x){
+	if(x instanceof ISeq)
+		return ((ISeq) x).next();
+	ISeq seq = seq(x);
+	if(seq == null)
+		return null;
+	return seq.next();
+}
+
+static public ISeq more(Object x){
+	if(x instanceof ISeq)
+		return ((ISeq) x).more();
+	ISeq seq = seq(x);
+	if(seq == null)
+		return PersistentList.EMPTY;
+	return seq.more();
+}
+
+//static public Seqable more(Object x){
+//    Seqable ret = null;
+//	if(x instanceof ISeq)
+//		ret = ((ISeq) x).more();
+//    else
+//        {
+//	    ISeq seq = seq(x);
+//	    if(seq == null)
+//		    ret = PersistentList.EMPTY;
+//	    else
+//            ret = seq.more();
+//        }
+//    if(ret == null)
+//        ret = PersistentList.EMPTY;
+//    return ret;
+//}
+
+static public Object peek(Object x){
+	if(x == null)
+		return null;
+	return ((IPersistentStack) x).peek();
+}
+
+static public Object pop(Object x){
+	if(x == null)
+		return null;
+	return ((IPersistentStack) x).pop();
+}
+
+static public Object get(Object coll, Object key){
+	if(coll instanceof ILookup)
+		return ((ILookup) coll).valAt(key);
+	return getFrom(coll, key);
+}
+
+static Object getFrom(Object coll, Object key){
+	if(coll == null)
+		return null;
+	else if(coll instanceof Map) {
+		Map m = (Map) coll;
+		return m.get(key);
+	}
+	else if(coll instanceof IPersistentSet) {
+		IPersistentSet set = (IPersistentSet) coll;
+		return set.get(key);
+	}
+	else if(key instanceof Number && (coll instanceof String || coll.getClass().isArray())) {
+		int n = ((Number) key).intValue();
+		if(n >= 0 && n < count(coll))
+			return nth(coll, n);
+		return null;
+	}
+
+	return null;
+}
+
+static public Object get(Object coll, Object key, Object notFound){
+	if(coll instanceof ILookup)
+		return ((ILookup) coll).valAt(key, notFound);
+	return getFrom(coll, key, notFound);
+}
+
+static Object getFrom(Object coll, Object key, Object notFound){
+	if(coll == null)
+		return notFound;
+	else if(coll instanceof Map) {
+		Map m = (Map) coll;
+		if(m.containsKey(key))
+			return m.get(key);
+		return notFound;
+	}
+	else if(coll instanceof IPersistentSet) {
+		IPersistentSet set = (IPersistentSet) coll;
+		if(set.contains(key))
+			return set.get(key);
+		return notFound;
+	}
+	else if(key instanceof Number && (coll instanceof String || coll.getClass().isArray())) {
+		int n = ((Number) key).intValue();
+		return n >= 0 && n < count(coll) ? nth(coll, n) : notFound;
+	}
+	return notFound;
+
+}
+
+static public Associative assoc(Object coll, Object key, Object val){
+	if(coll == null)
+		return new PersistentArrayMap(new Object[]{key, val});
+	return ((Associative) coll).assoc(key, val);
+}
+
+static public Object contains(Object coll, Object key){
+	if(coll == null)
+		return F;
+	else if(coll instanceof Associative)
+		return ((Associative) coll).containsKey(key) ? T : F;
+	else if(coll instanceof IPersistentSet)
+		return ((IPersistentSet) coll).contains(key) ? T : F;
+	else if(coll instanceof Map) {
+		Map m = (Map) coll;
+		return m.containsKey(key) ? T : F;
+	}
+	else if(coll instanceof Set) {
+		Set s = (Set) coll;
+		return s.contains(key) ? T : F;
+	}
+	else if(key instanceof Number && (coll instanceof String || coll.getClass().isArray())) {
+		int n = ((Number) key).intValue();
+		return n >= 0 && n < count(coll);
+	}
+	throw new IllegalArgumentException("contains? not supported on type: " + coll.getClass().getName());
+}
+
+static public Object find(Object coll, Object key){
+	if(coll == null)
+		return null;
+	else if(coll instanceof Associative)
+		return ((Associative) coll).entryAt(key);
+	else {
+		Map m = (Map) coll;
+		if(m.containsKey(key))
+			return new MapEntry(key, m.get(key));
+		return null;
+	}
+}
+
+//takes a seq of key,val,key,val
+
+//returns tail starting at val of matching key if found, else null
+static public ISeq findKey(Keyword key, ISeq keyvals) {
+	while(keyvals != null) {
+		ISeq r = keyvals.next();
+		if(r == null)
+			throw Util.runtimeException("Malformed keyword argslist");
+		if(keyvals.first() == key)
+			return r;
+		keyvals = r.next();
+	}
+	return null;
+}
+
+static public Object dissoc(Object coll, Object key) {
+	if(coll == null)
+		return null;
+	return ((IPersistentMap) coll).without(key);
+}
+
+static public Object nth(Object coll, int n){
+	if(coll instanceof Indexed)
+		return ((Indexed) coll).nth(n);
+	return nthFrom(Util.ret1(coll, coll = null), n);
+}
+
+static Object nthFrom(Object coll, int n){
+	if(coll == null)
+		return null;
+	else if(coll instanceof CharSequence)
+		return Character.valueOf(((CharSequence) coll).charAt(n));
+	else if(coll.getClass().isArray())
+		return Reflector.prepRet(coll.getClass().getComponentType(),Array.get(coll, n));
+	else if(coll instanceof RandomAccess)
+		return ((List) coll).get(n);
+	else if(coll instanceof Matcher)
+		return ((Matcher) coll).group(n);
+
+	else if(coll instanceof Map.Entry) {
+		Map.Entry e = (Map.Entry) coll;
+		if(n == 0)
+			return e.getKey();
+		else if(n == 1)
+			return e.getValue();
+		throw new IndexOutOfBoundsException();
+	}
+
+	else if(coll instanceof Sequential) {
+		ISeq seq = RT.seq(coll);
+		coll = null;
+		for(int i = 0; i <= n && seq != null; ++i, seq = seq.next()) {
+			if(i == n)
+				return seq.first();
+		}
+		throw new IndexOutOfBoundsException();
+	}
+	else
+		throw new UnsupportedOperationException(
+				"nth not supported on this type: " + coll.getClass().getSimpleName());
+}
+
+static public Object nth(Object coll, int n, Object notFound){
+	if(coll instanceof Indexed) {
+		Indexed v = (Indexed) coll;
+			return v.nth(n, notFound);
+	}
+	return nthFrom(coll, n, notFound);
+}
+
   static public Object objcClass(String name) {
     if (ObjC.objc) {
       return nativeObjcClass(name);
@@ -414,90 +835,6 @@ public class RT {
   static public native Object nativeObjcClass(String name) /*-[
                                                      return NSClassFromString(name);
                                                      ]-*/;
-
-  static public Var var(String ns, String name) {
-    return Var.intern(Namespace.findOrCreate(Symbol.intern(null, ns)),
-        Symbol.intern(null, name));
-  }
-
-  static public Var var(String ns, String name, Object init) {
-    return Var.intern(Namespace.findOrCreate(Symbol.intern(null, ns)),
-        Symbol.intern(null, name), init);
-  }
-
-  public static void loadResourceScript(String name) throws IOException {
-    loadResourceScript(name, true);
-  }
-
-  public static void maybeLoadResourceScript(String name) throws IOException {
-    loadResourceScript(name, false);
-  }
-
-  public static void loadResourceScript(String name, boolean failIfNotFound)
-      throws IOException {
-    ClassLoader cl = new clojure.lang.DynamicClassLoader(null);
-    loadResourceScript(RT.class, name, failIfNotFound);
-  }
-
-  public static void loadResourceScript(Class c, String name)
-      throws IOException {
-    loadResourceScript(c, name, true);
-  }
-
-  public static void loadResourceScript(Class c, String name,
-      boolean failIfNotFound) throws IOException {
-    int slash = name.lastIndexOf('/');
-    String file = slash >= 0 ? name.substring(slash + 1) : name;
-    InputStream ins = resourceAsStream(baseLoader(), name);
-    if (ins != null) {
-      try {
-        Compiler.load(new InputStreamReader(ins, UTF8), name, file);
-      } finally {
-        ins.close();
-      }
-    } else if (failIfNotFound) {
-      throw new FileNotFoundException(
-          "Could not locate Clojure resource on classpath: " + name);
-    }
-  }
-
-  static public void init() {
-    RT.errPrintWriter().println("No need to call RT.init() anymore");
-  }
-
-  static public long lastModified(URL url, String libfile) throws IOException {
-    if (url.getProtocol().equals("jar")) {
-      return (Long) Reflector.invokeInstanceMethod(Reflector
-          .invokeInstanceMethod(Reflector.invokeInstanceMethod(Reflector
-              .invokeInstanceMethod(url, "openConnection", new Object[0]),
-              "getJarFile", new Object[0]), "getEntry",
-              new Object[] { libfile }), "getTime", new Object[0]);
-    } else {
-      return (Long) Reflector.invokeInstanceMethod(
-          Reflector.invokeInstanceMethod(url, "openConnection", new Object[0]),
-          "getLastModified", new Object[0]);
-    }
-  }
-
-  public static void compile(String cljfile) throws IOException {
-    InputStream ins = resourceAsStream(baseLoader(), cljfile);
-    if (ins != null) {
-      try {
-        Compiler.compile(new InputStreamReader(ins, UTF8), cljfile,
-            cljfile.substring(1 + cljfile.lastIndexOf("/")));
-      } finally {
-        ins.close();
-      }
-
-    } else
-      throw new FileNotFoundException(
-          "Could not locate Clojure resource on classpath: " + cljfile);
-  }
-
-  static public void load(String scriptbase) throws IOException,
-      ClassNotFoundException {
-    load(scriptbase, true);
-  }
 
   public static native void loadiOS(String scriptbase) /*-[
     IOSObjectArray *parts = [[scriptbase replaceAll:@"-" withReplacement:@"_"] split:@"/"];
@@ -560,347 +897,6 @@ public class RT {
         throw new FileNotFoundException(String.format(
             "Could not locate %s or %s on classpath: ", classfile, cljfile));
     }
-  }
-
-  static public int nextID() {
-    return id.getAndIncrement();
-  }
-
-  // Load a library in the System ClassLoader instead of Clojure's own.
-  public static void loadLibrary(String libname) {
-    Reflector.invokeStaticMethod(System.class, "loadLibrary",
-        new Object[] { libname });
-  }
-
-  // //////////// Collections support /////////////////////////////////
-
-  static public ISeq seq(Object coll) {
-    if (coll instanceof ASeq)
-      return (ASeq) coll;
-    else if (coll instanceof LazySeq)
-      return ((LazySeq) coll).seq();
-    else
-      return seqFrom(coll);
-  }
-
-  static ISeq seqFrom(Object coll) {
-    if (coll instanceof Seqable)
-      return ((Seqable) coll).seq();
-    else if (coll == null)
-      return null;
-    else if (coll instanceof Iterable)
-      return IteratorSeq.create(((Iterable) coll).iterator());
-    else if (coll.getClass().isArray())
-      return ArraySeq.createFromObject(coll);
-    else if (coll instanceof CharSequence)
-      return StringSeq.create((CharSequence) coll);
-    else if (coll instanceof Map)
-      return seq(((Map) coll).entrySet());
-    else {
-      Class c = coll.getClass();
-      Class sc = c.getSuperclass();
-      throw new ExceptionInfo("Don't know how to create ISeq from: "
-          + c.getName(), map(Keyword.intern("instance"), coll));
-    }
-  }
-
-  static public Object seqOrElse(Object o) {
-    return seq(o) == null ? null : o;
-  }
-
-  static public ISeq keys(Object coll) {
-    return APersistentMap.KeySeq.create(seq(coll));
-  }
-
-  static public ISeq vals(Object coll) {
-    return APersistentMap.ValSeq.create(seq(coll));
-  }
-
-  static public IPersistentMap meta(Object x) {
-    if (x instanceof IMeta)
-      return ((IMeta) x).meta();
-    return null;
-  }
-
-  public static int count(Object o) {
-    if (o instanceof Counted)
-      return ((Counted) o).count();
-    return countFrom(Util.ret1(o, o = null));
-  }
-
-  static int countFrom(Object o) {
-    if (o == null)
-      return 0;
-    else if (o instanceof IPersistentCollection) {
-      ISeq s = seq(o);
-      o = null;
-      int i = 0;
-      for (; s != null; s = s.next()) {
-        if (s instanceof Counted)
-          return i + s.count();
-        i++;
-      }
-      return i;
-    } else if (o instanceof CharSequence)
-      return ((CharSequence) o).length();
-    else if (o instanceof Collection)
-      return ((Collection) o).size();
-    else if (o instanceof Map)
-      return ((Map) o).size();
-    else if (o.getClass().isArray())
-      return Array.getLength(o);
-
-    throw new UnsupportedOperationException(
-        "count not supported on this type: " + o.getClass().getSimpleName());
-  }
-
-  static public IPersistentCollection conj(IPersistentCollection coll, Object x) {
-    if (coll == null)
-      return new PersistentList(x);
-    return coll.cons(x);
-  }
-
-  static public ISeq cons(Object x, Object coll) {
-    // ISeq y = seq(coll);
-    if (coll == null)
-      return new PersistentList(x);
-    else if (coll instanceof ISeq)
-      return new Cons(x, (ISeq) coll);
-    else
-      return new Cons(x, seq(coll));
-  }
-
-  static public Object first(Object x) {
-    if (x instanceof ISeq)
-      return ((ISeq) x).first();
-    ISeq seq = seq(x);
-    if (seq == null)
-      return null;
-    return seq.first();
-  }
-
-  static public Object second(Object x) {
-    return first(next(x));
-  }
-
-  static public Object third(Object x) {
-    return first(next(next(x)));
-  }
-
-  static public Object fourth(Object x) {
-    return first(next(next(next(x))));
-  }
-
-  static public ISeq next(Object x) {
-    if (x instanceof ISeq)
-      return ((ISeq) x).next();
-    ISeq seq = seq(x);
-    if (seq == null)
-      return null;
-    return seq.next();
-  }
-
-  static public ISeq more(Object x) {
-    if (x instanceof ISeq)
-      return ((ISeq) x).more();
-    ISeq seq = seq(x);
-    if (seq == null)
-      return PersistentList.EMPTY;
-    return seq.more();
-  }
-
-  // static public Seqable more(Object x){
-  // Seqable ret = null;
-  // if(x instanceof ISeq)
-  // ret = ((ISeq) x).more();
-  // else
-  // {
-  // ISeq seq = seq(x);
-  // if(seq == null)
-  // ret = PersistentList.EMPTY;
-  // else
-  // ret = seq.more();
-  // }
-  // if(ret == null)
-  // ret = PersistentList.EMPTY;
-  // return ret;
-  // }
-
-  static public Object peek(Object x) {
-    if (x == null)
-      return null;
-    return ((IPersistentStack) x).peek();
-  }
-
-  static public Object pop(Object x) {
-    if (x == null)
-      return null;
-    return ((IPersistentStack) x).pop();
-  }
-
-  static public Object get(Object coll, Object key) {
-    if (coll instanceof ILookup)
-      return ((ILookup) coll).valAt(key);
-    return getFrom(coll, key);
-  }
-
-  static Object getFrom(Object coll, Object key) {
-    if (coll == null)
-      return null;
-    else if (coll instanceof Map) {
-      Map m = (Map) coll;
-      return m.get(key);
-    } else if (coll instanceof IPersistentSet) {
-      IPersistentSet set = (IPersistentSet) coll;
-      return set.get(key);
-    } else if (key instanceof Number
-        && (coll instanceof String || coll.getClass().isArray())) {
-      int n = ((Number) key).intValue();
-      if (n >= 0 && n < count(coll))
-        return nth(coll, n);
-      return null;
-    }
-
-    return null;
-  }
-
-  static public Object get(Object coll, Object key, Object notFound) {
-    if (coll instanceof ILookup)
-      return ((ILookup) coll).valAt(key, notFound);
-    return getFrom(coll, key, notFound);
-  }
-
-  static Object getFrom(Object coll, Object key, Object notFound) {
-    if (coll == null)
-      return notFound;
-    else if (coll instanceof Map) {
-      Map m = (Map) coll;
-      if (m.containsKey(key))
-        return m.get(key);
-      return notFound;
-    } else if (coll instanceof IPersistentSet) {
-      IPersistentSet set = (IPersistentSet) coll;
-      if (set.contains(key))
-        return set.get(key);
-      return notFound;
-    } else if (key instanceof Number
-        && (coll instanceof String || coll.getClass().isArray())) {
-      int n = ((Number) key).intValue();
-      return n >= 0 && n < count(coll) ? nth(coll, n) : notFound;
-    }
-    return notFound;
-
-  }
-
-  static public Associative assoc(Object coll, Object key, Object val) {
-    if (coll == null)
-      return new PersistentArrayMap(new Object[] { key, val });
-    return ((Associative) coll).assoc(key, val);
-  }
-
-  static public Object contains(Object coll, Object key) {
-    if (coll == null)
-      return F;
-    else if (coll instanceof Associative)
-      return ((Associative) coll).containsKey(key) ? T : F;
-    else if (coll instanceof IPersistentSet)
-      return ((IPersistentSet) coll).contains(key) ? T : F;
-    else if (coll instanceof Map) {
-      Map m = (Map) coll;
-      return m.containsKey(key) ? T : F;
-    } else if (coll instanceof Set) {
-      Set s = (Set) coll;
-      return s.contains(key) ? T : F;
-    } else if (key instanceof Number
-        && (coll instanceof String || coll.getClass().isArray())) {
-      int n = ((Number) key).intValue();
-      return n >= 0 && n < count(coll);
-    }
-    throw new IllegalArgumentException("contains? not supported on type: "
-        + coll.getClass().getName());
-  }
-
-  static public Object find(Object coll, Object key) {
-    if (coll == null)
-      return null;
-    else if (coll instanceof Associative)
-      return ((Associative) coll).entryAt(key);
-    else {
-      Map m = (Map) coll;
-      if (m.containsKey(key))
-        return new MapEntry(key, m.get(key));
-      return null;
-    }
-  }
-
-  // takes a seq of key,val,key,val
-
-  // returns tail starting at val of matching key if found, else null
-  static public ISeq findKey(Keyword key, ISeq keyvals) {
-    while (keyvals != null) {
-      ISeq r = keyvals.next();
-      if (r == null)
-        throw Util.runtimeException("Malformed keyword argslist");
-      if (keyvals.first() == key)
-        return r;
-      keyvals = r.next();
-    }
-    return null;
-  }
-
-  static public Object dissoc(Object coll, Object key) {
-    if (coll == null)
-      return null;
-    return ((IPersistentMap) coll).without(key);
-  }
-
-  static public Object nth(Object coll, int n) {
-    if (coll instanceof Indexed)
-      return ((Indexed) coll).nth(n);
-    return nthFrom(Util.ret1(coll, coll = null), n);
-  }
-
-  static Object nthFrom(Object coll, int n) {
-    if (coll == null)
-      return null;
-    else if (coll instanceof CharSequence)
-      return Character.valueOf(((CharSequence) coll).charAt(n));
-    else if (coll.getClass().isArray())
-      return Reflector.prepRet(coll.getClass().getComponentType(),
-          Array.get(coll, n));
-    else if (coll instanceof RandomAccess)
-      return ((List) coll).get(n);
-    else if (coll instanceof Matcher)
-      return ((Matcher) coll).group(n);
-
-    else if (coll instanceof Map.Entry) {
-      Map.Entry e = (Map.Entry) coll;
-      if (n == 0)
-        return e.getKey();
-      else if (n == 1)
-        return e.getValue();
-      throw new IndexOutOfBoundsException();
-    }
-
-    else if (coll instanceof Sequential) {
-      ISeq seq = RT.seq(coll);
-      coll = null;
-      for (int i = 0; i <= n && seq != null; ++i, seq = seq.next()) {
-        if (i == n)
-          return seq.first();
-      }
-      throw new IndexOutOfBoundsException();
-    } else
-      throw new UnsupportedOperationException(
-          "nth not supported on this type: " + coll.getClass().getSimpleName());
-  }
-
-  static public Object nth(Object coll, int n, Object notFound) {
-    if (coll instanceof Indexed) {
-      Indexed v = (Indexed) coll;
-      return v.nth(n, notFound);
-    }
-    return nthFrom(coll, n, notFound);
   }
 
   static Object nthFrom(Object coll, int n, Object notFound) {
