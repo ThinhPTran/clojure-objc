@@ -9,7 +9,7 @@
     ...
   });"
   [& body]
-  `(clojure.lang.RT/dispatchInMain
+  `(clojure.lang.RT/dispatchInMainSync
     (fn [] ~@body)))
 
 (defn sel

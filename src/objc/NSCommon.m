@@ -29,8 +29,11 @@
 #import <dlfcn.h>
 
 static id cons;
-static id conj;
+static id fconj;
 static id assoc;
+
+// Necessary for inline functions
+static id global_functions;
 
 #if CGFLOAT_IS_DOUBLE
 #define CGFloatFFI &ffim_type_double
@@ -191,15 +194,14 @@ static int r0_size = sizeof(unsigned long long);
 // https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/iPhoneOSABIReference.pdf
 BOOL use_stret(id object, NSString* selector) {
     SEL sel = NSSelectorFromString(selector);
-    Method method = class_getInstanceMethod([([object isKindOfClass:[WeakRef class]] ?
-                                              [(WeakRef*)object deref] : object) class], sel);
-    if (method == nil) {
-        method = class_getClassMethod([([object isKindOfClass:[WeakRef class]] ?
-                                        [(WeakRef*)object deref] : object) class], sel);
+    object = [object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object;
+    NSMethodSignature *sig = [object methodSignatureForSelector:sel];
+    if (sig == nil) {
+        @throw [NSException
+                exceptionWithName:@"Method not found"
+                reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
     }
-    char ret[256];
-    method_getReturnType(method, ret, 256);
-    char t = [NSCommon signatureToType:ret];
+    char t = [NSCommon signatureToType:[sig methodReturnType]];
     return sizeof_type(t) > r0_size;
 }
 
@@ -216,7 +218,12 @@ BOOL use_stret(id object, NSString* selector) {
 +(void)initialize {
     assoc = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"assoc"];
     cons = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"cons"];
-    conj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
+    fconj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
+    global_functions = [ClojureLangPersistentHashMap EMPTY];
+    global_functions = [global_functions assocWithId:@"CGRectMake" withId:[NSValue valueWithPointer:CGRectMake]];
+    global_functions = [global_functions assocWithId:@"CGPointMake" withId:[NSValue valueWithPointer:CGPointMake]];
+    global_functions = [global_functions assocWithId:@"CGSizeMake" withId:[NSValue valueWithPointer:CGSizeMake]];
+    global_functions = [global_functions assocWithId:@"CGVectorMake" withId:[NSValue valueWithPointer:CGVectorMake]];
 }
 
 #define make_pointer(e,type)\
@@ -342,6 +349,9 @@ BOOL use_stret(id object, NSString* selector) {
                 }
                 break;
             }
+            default: {
+                @throw [NSException exceptionWithName:@"Type not found" reason:[NSString stringWithFormat:@"%c", type] userInfo:nil];
+            }
         }
         argument_values[n] = ret;
     }
@@ -349,8 +359,15 @@ BOOL use_stret(id object, NSString* selector) {
     ffim_cif c;
     ffim_type *result_type = ffi_type_for_type(retType);
     int status = ffi_mini_prep_cif(&c, FFIM_DEFAULT_ABI, (unsigned int) count, result_type, argument_types);
-    
     void *fn = dlsym(RTLD_DEFAULT, [name UTF8String]);
+    if (fn == nil) {
+        NSValue *val = [global_functions valAtWithId:name];
+        if (val != nil) {
+            fn = [val pointerValue];
+        } else {
+            @throw [NSException exceptionWithName:@"Function not found" reason:name userInfo:nil];
+        }
+    }
     ffi_mini_call(&c, fn, result_value, argument_values);
 
     for (int n=0; n < count; n++) {
@@ -492,7 +509,7 @@ BOOL use_stret(id object, NSString* selector) {
     id retType = [ClojureLangRT firstWithId: types];
     types = [ClojureLangRT nextWithId:types];
     id args = [ClojureLangPersistentVector EMPTY];
-    args = [conj invokeWithId:args withId:[WeakRef from:sself]];
+    args = [fconj invokeWithId:args withId:[WeakRef from:sself]];
     for (int n = 0; n < [ClojureLangRT countFromWithId:types]; n++) {
         id val = nil;
         int j = n + 2;
@@ -646,7 +663,7 @@ BOOL use_stret(id object, NSString* selector) {
                                                     reason:[NSString stringWithFormat:@"%@",
                                                             [ClojureLangRT nthFromWithId:types withInt:n]] userInfo:nil];
         }
-        args = [conj invokeWithId:args withId:val];
+        args = [fconj invokeWithId:args withId:val];
     }
     
     id v = [fn applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
@@ -875,10 +892,10 @@ BOOL use_stret(id object, NSString* selector) {
 
 + (id) signaturesToTypes:(NSMethodSignature*)sig skipSel:(BOOL)skip {
     id types = [ClojureLangPersistentVector EMPTY];
-    types = [conj invokeWithId:types withId:[[[JavaLangCharacter alloc] initWithChar:[NSCommon signatureToType:[sig methodReturnType]]] autorelease]];
+    types = [fconj invokeWithId:types withId:[[[JavaLangCharacter alloc] initWithChar:[NSCommon signatureToType:[sig methodReturnType]]] autorelease]];
     for (int n = 0; n < [sig numberOfArguments]; n++) {
         if (!skip || (n != 0 && n != 1)) {
-            types = [conj invokeWithId:types withId:[[[JavaLangCharacter alloc] initWithChar:[NSCommon signatureToType:[sig getArgumentTypeAtIndex:n]]] autorelease]];
+            types = [fconj invokeWithId:types withId:[[[JavaLangCharacter alloc] initWithChar:[NSCommon signatureToType:[sig getArgumentTypeAtIndex:n]]] autorelease]];
         }
     }
     return types;

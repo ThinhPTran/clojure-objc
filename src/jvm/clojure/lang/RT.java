@@ -295,9 +295,23 @@ public class RT {
   }
 
   public static native void dispatchInMain(final AFn fn) /*-[
-    dispatch_async(dispatch_get_main_queue(), ^{
+  if ([NSThread isMainThread]) {
       [fn invoke];
-    });
+    } else {
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [fn invoke];
+      });
+    }
+  ]-*/;
+  
+  public static native void dispatchInMainSync(final AFn fn) /*-[
+    if ([NSThread isMainThread]) {
+      [fn invoke];
+    } else {
+      dispatch_sync(dispatch_get_main_queue(), ^{
+        [fn invoke];
+      });
+    }
   ]-*/;
   
   // duck typing stderr plays nice with e.g. swank
