@@ -224,6 +224,13 @@ BOOL use_stret(id object, NSString* selector) {
     global_functions = [global_functions assocWithId:@"CGPointMake" withId:[NSValue valueWithPointer:CGPointMake]];
     global_functions = [global_functions assocWithId:@"CGSizeMake" withId:[NSValue valueWithPointer:CGSizeMake]];
     global_functions = [global_functions assocWithId:@"CGVectorMake" withId:[NSValue valueWithPointer:CGVectorMake]];
+    global_functions = [global_functions assocWithId:@"UIEdgeInsetsMake" withId:[NSValue valueWithPointer:UIEdgeInsetsMake]];
+    global_functions = [global_functions assocWithId:@"UIEdgeInsetsInsetRect" withId:[NSValue valueWithPointer:UIEdgeInsetsInsetRect]];
+    global_functions = [global_functions assocWithId:@"UIOffsetMake" withId:[NSValue valueWithPointer:UIOffsetMake]];
+    global_functions = [global_functions assocWithId:@"UIEdgeInsetsEqualToEdgeInsets" withId:[NSValue valueWithPointer:UIEdgeInsetsEqualToEdgeInsets]];
+    global_functions = [global_functions assocWithId:@"UIOffsetEqualToOffset" withId:[NSValue valueWithPointer:UIOffsetEqualToOffset]];
+
+    global_functions = [global_functions retain];
 }
 
 #define make_pointer(e,type)\
