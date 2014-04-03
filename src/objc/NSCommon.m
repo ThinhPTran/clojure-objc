@@ -32,6 +32,10 @@ static id cons;
 static id fconj;
 static id assoc;
 
+static bool classIsDynamic(Class clazz) {
+    return [ClojureLangRT getWithId:[dynamicClasses deref] withId:NSStringFromClass(clazz)] != nil;
+}
+
 // Necessary for inline functions
 static id global_functions;
 
@@ -240,6 +244,19 @@ BOOL use_stret(id object, NSString* selector) {
     ret = p;\
 
 +(id)ccall:(id)name types:(id)types args:(id)args {
+    void *fn = dlsym(RTLD_DEFAULT, [name UTF8String]);
+    if (fn == nil) {
+        NSValue *val = [global_functions valAtWithId:name];
+        if (val != nil) {
+            fn = [val pointerValue];
+        } else {
+            @throw [NSException exceptionWithName:@"Function not found" reason:name userInfo:nil];
+        }
+    }
+    return [NSCommon ccallWithFn:fn types:types args:args];
+}
+
++(id)ccallWithFn:(void*)fn types:(id)types args:(id)args {
     char retType = to_char([ClojureLangRT firstWithId:types]);
     void *result_value = malloc_ret(retType);
 
@@ -366,15 +383,7 @@ BOOL use_stret(id object, NSString* selector) {
     ffim_cif c;
     ffim_type *result_type = ffi_type_for_type(retType);
     int status = ffi_mini_prep_cif(&c, FFIM_DEFAULT_ABI, (unsigned int) count, result_type, argument_types);
-    void *fn = dlsym(RTLD_DEFAULT, [name UTF8String]);
-    if (fn == nil) {
-        NSValue *val = [global_functions valAtWithId:name];
-        if (val != nil) {
-            fn = [val pointerValue];
-        } else {
-            @throw [NSException exceptionWithName:@"Function not found" reason:name userInfo:nil];
-        }
-    }
+    
     ffi_mini_call(&c, fn, result_value, argument_values);
 
     for (int n=0; n < count; n++) {
@@ -795,6 +804,9 @@ BOOL use_stret(id object, NSString* selector) {
             ret = &o;
             break;
         }
+        default: {
+            @throw [NSException exceptionWithName:@"Missing type" reason:[NSString stringWithFormat:@"%@", retType] userInfo:nil];
+        }
     }
     [invocation setReturnValue:ret];
 }
@@ -879,9 +891,15 @@ BOOL use_stret(id object, NSString* selector) {
     return [NSCommon invokeFun:s withSelf:object withSelector:selector withArgs:arguments];
 }
 
-+ (id) invokeSuperSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
-    struct objc_super superData = {object, [object superclass]};
++ (id) invokeSuperSel:(id)object withDispatchClass:(id)clazz withSelector:(NSString*)selector
+             withArgs:(id<ClojureLangISeq>)arguments {
     SEL sel = NSSelectorFromString(selector);
+    clazz = clazz == nil ? [object superclass] : [NSClassFromString(clazz) superclass];
+    if (classIsDynamic(clazz)) {
+        objc_setAssociatedObject(object, "__dispatch_class__", clazz, 1);
+    }
+    struct objc_super superData = {object, clazz};
+
     NSMethodSignature *sig = [object methodSignatureForSelector:sel];
     if (sig == nil) {
         @throw([NSException exceptionWithName:@"Error invoking superclass objc method. Selector not found" reason:selector userInfo:nil]);

@@ -16,8 +16,6 @@
 #import "NSCommon.h"
 #import <UIKit/UIKit.h>
 
-static ClojureLangAtom *dynamicClasses;
-
 #define va_arg_p(type)\
     {\
     type v = va_arg(ap, type); \
@@ -28,9 +26,26 @@ static ClojureLangAtom *dynamicClasses;
 #define dispatch_args(self, sel) \
     va_list ap; \
     va_start(ap, sel); \
-    id o = [ClojureLangRT getWithId:[dynamicClasses deref] withId:NSStringFromClass([self class])]; \
+    Class dispatchClass = objc_getAssociatedObject(self, "__dispatch_class__"); \
+    objc_setAssociatedObject(self, "__dispatch_class__", nil, 0); \
+    if (dispatchClass == nil) { \
+        dispatchClass = [self class]; \
+    } \
+    id o = [ClojureLangRT getWithId:[dynamicClasses deref] withId:NSStringFromClass(dispatchClass)]; \
     id pair = [ClojureLangRT getWithId:o withId:NSStringFromSelector(sel)]; \
-    id fn =  [ClojureLangRT secondWithId:pair];\
+    id fn = [ClojureLangRT secondWithId:pair]; \
+    while (fn == nil) { \
+        dispatchClass = [dispatchClass superclass]; \
+        o = [ClojureLangRT getWithId:[dynamicClasses deref] withId:NSStringFromClass(dispatchClass)]; \
+        pair = [ClojureLangRT getWithId:o withId:NSStringFromSelector(sel)]; \
+        fn = [ClojureLangRT secondWithId:pair]; \
+        if (o == nil) { \
+            break; \
+        } \
+    } \
+    if (fn == nil) { \
+        @throw [NSException exceptionWithName:NSStringFromClass(dispatchClass) reason:NSStringFromSelector(sel) userInfo:nil]; \
+    } \
     id types = [ClojureLangRT firstWithId:pair];\
     id sig;\
     if (types == nil) { \
@@ -232,10 +247,7 @@ IMP getDispatch(char c) {
         void * d;
         const char * enc;
         if (types == nil) {
-            Method method = class_getClassMethod(superc, sel);
-            if (method == nil) {
-                method = class_getInstanceMethod(superc, sel);
-            }
+            Method method = class_getInstanceMethod(superc, sel);
             char ret[256];
             method_getReturnType(method, ret, 256);
             d = getDispatch([NSCommon signatureToType:ret]);
@@ -245,7 +257,7 @@ IMP getDispatch(char c) {
             d = getDispatch(to_char(r));
             enc = [NSCommon makeSignature:types];
         }
-        class_addMethod(clazz, sel, d, enc);
+        class_replaceMethod(clazz, sel, d, enc);
         seq = [ClojureLangRT nextWithId:seq];
     }
     

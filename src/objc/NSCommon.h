@@ -34,6 +34,9 @@
 
 #import <Foundation/Foundation.h>
 #import "clojure/lang/AFn.h"
+#import "clojure/lang/Atom.h"
+
+static ClojureLangAtom *dynamicClasses;
 
 #define to_char(c)\
 [ClojureLangRT charCastWithId:c]\
@@ -81,6 +84,6 @@ static const char pointer_type = 'Y';
 
 +(id)invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments;
 
-+(id)invokeSuperSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments;
++(id)invokeSuperSel:(id)object withDispatchClass:(id)clazz withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments;
 
 @end

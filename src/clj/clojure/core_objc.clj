@@ -1,5 +1,9 @@
 (in-ns 'clojure.core)
 
+(use 'clojure.walk)
+
+(def ^:dynamic dispatch-class)
+
 (def objc? (clojure.lang.ObjC/objc))
 
 (defmacro dispatch-main
@@ -55,12 +59,13 @@
   "
   [& args]
   (let [t (first args)
+        dispatch-class (if (bound? #'dispatch-class) dispatch-class nil)
         args (vec (next args))
         has-params (even? (count args))
         args (if has-params (partition 2 args) args)
         params (if has-params (mapv second args) [])
         selector (if has-params (str (subs (apply str (map first args)) 1) ":") (name (first args)))]
-    `($ ($ NSCommon) :invokeSuperSel ~t :withSelector ~selector :withArgs ~params)))
+    `($ ($ NSCommon) :invokeSuperSel ~t :withDispatchClass ~dispatch-class :withSelector ~selector :withArgs ~params)))
 
 (def objc-types
   {:void \v
@@ -193,8 +198,7 @@
                    `[~sel [[~@types] (fn [~self-sym ~@fields] ~@body)]]))
                methods)
         i (into {} i)]
-    `($ ($ ($ NSProxyImpl) :alloc) :initWithClass ~clazz :map
-        ~i)))
+    `($ ($ ($ NSProxyImpl) :alloc) :initWithClass ~clazz :map ~i)))
 
 (defc objc_setAssociatedObject :void [:id :pointer :id :int])
 
@@ -237,7 +241,10 @@
            true))
   "
   [na super & methods]
-  (let [na (name na)
+  (let [methods
+        (binding [dispatch-class (name na)]
+          (mapv macroexpand-all methods))
+        na (name na)
         super (name super)
         i (map (fn [[args & body]]
                  (let [self-sym (first args)
