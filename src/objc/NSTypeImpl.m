@@ -23,7 +23,7 @@
     break;\
     }\
 
-#define dispatch_args(self, sel) \
+#define dispatch_args(self, sel, type) \
     va_list ap; \
     va_start(ap, sel); \
     Class dispatchClass = objc_getAssociatedObject(self, "__dispatch_class__"); \
@@ -86,15 +86,17 @@
         } \
     } \
     va_end(ap); \
-    void* r = callWithArgs(args, self, [ClojureLangRT consWithId:retType withId:types], fn); \
-    free(args); \
+    type* rp = callWithArgs(args, self, [ClojureLangRT consWithId:retType withId:types], fn); \
 
 #define dispatch_args_r(self, sel, type)\
-    dispatch_args(self, sel);\
-    return (type)*((type*)r);\
+    dispatch_args(self, sel, type);\
+    type r = *rp; \
+    free(args); \
+    return r;\
 
 void dispatch_void(id self, SEL sel, ...) {
-    dispatch_args(self, sel);
+    dispatch_args(self, sel, void);
+    free(args);
 }
 
 float dispatch_float(id self, SEL sel, ...) {

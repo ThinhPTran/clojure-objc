@@ -258,8 +258,6 @@ void * malloc_ret(char c) {
     return malloc(sizeof_type(c));
 }
 
-static int r0_size = sizeof(unsigned long long);
-
 // https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/iPhoneOSABIReference.pdf
 BOOL use_stret(id object, NSString* selector) {
     SEL sel = NSSelectorFromString(selector);
@@ -270,11 +268,7 @@ BOOL use_stret(id object, NSString* selector) {
                 exceptionWithName:@"Method not found"
                 reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
     }
-#ifndef __arm64__
-    return sizeof_type(signatureToType([sig methodReturnType])) >= r0_size;
-#else
-    return sizeof_type(signatureToType([sig methodReturnType])) > r0_size;
-#endif
+    return sizeof_type(signatureToType([sig methodReturnType])) > 8;
 }
 
 #define pval(type)\
@@ -397,7 +391,6 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
     }
     
     id v = [fn applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
-    
     void * ret;
     
     switch (retType) {
@@ -1184,13 +1177,6 @@ const char* makeSignature(id types) {
     if (sig == nil) {
         @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
     }
-    return [NSCommon invokeFun:fun withSig:sig withSelf:object withSelector:selector withArgs:arguments];
-}
-
-+ (id) invokeFun:(NSString*)fun withSig:(NSMethodSignature*)sig
-        withSelf:(id)object
-    withSelector:(NSString*)selector
-        withArgs:(id<ClojureLangISeq>)arguments {
     id args = [cons invokeWithId:[NSValue valueWithPointer:NSSelectorFromString(selector)] withId:arguments];
     args = [cons invokeWithId:object withId:args];
     return [NSCommon ccall:fun types:signaturesToTypes(sig, NO) args:args];
