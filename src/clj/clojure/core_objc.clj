@@ -46,11 +46,11 @@
       (let [args (vec (next args))
             has-params (even? (count args))
             args (partition 2 (if has-params args (conj args nil)))
-            params (map second args)
+            params (mapv second args)
             selector (str (subs (apply str (map first args)) 1) (if has-params ":" ""))]
         (if has-params
-          `((clojure.lang.Selector. ~selector) ~t ~@params)
-          `((clojure.lang.Selector. ~selector) ~t))))))
+          `(clojure.lang.Selector/invokeSelector ~selector ~t ~params)
+          `(clojure.lang.Selector/invokeSelector ~selector ~t))))))
 
 (defmacro $$
   "Like $ but calls super.

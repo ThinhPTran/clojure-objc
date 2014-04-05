@@ -19,7 +19,7 @@
 #define va_arg_p(type)\
     {\
     type v = va_arg(ap, type); \
-    [i setArgument:&v atIndex:n];\
+    args[n] = &v; \
     break;\
     }\
 
@@ -50,18 +50,16 @@
     id sig;\
     if (types == nil) { \
         sig = [self methodSignatureForSelector:sel]; \
-        types = [NSCommon signaturesToTypes:sig skipSel:YES]; \
+        types = signaturesToTypes(sig, YES); \
     } else {\
-        sig = [NSMethodSignature signatureWithObjCTypes:[NSCommon makeSignature:types]];\
+        sig = [NSMethodSignature signatureWithObjCTypes:makeSignature(types)];\
     }\
     id retType = [ClojureLangRT firstWithId:types]; \
-    types = [ClojureLangRT nextWithId:types]; \
-    id ttypes = types; \
-    NSInvocation *i = [NSInvocation invocationWithMethodSignature:sig]; \
-    [i setSelector:sel]; \
-    int n = 2; \
-    while (types != nil) { \
-        switch (to_char([ClojureLangRT firstWithId:types])) { \
+    IOSObjectArray *typesa = [ClojureLangRT toArrayWithId:[ClojureLangRT nextWithId:types]]; \
+    long c = [typesa count]; \
+    void **args = (void **) malloc ((c + 1) * sizeof(void *)); \
+    for (int n = 0; n < c; n++) { \
+        switch (to_char([typesa objectAtIndex:n])) { \
             case float_type: va_arg_p(double)\
             case longlong_type: va_arg_p(long long)\
             case long_type: va_arg_p(long)\
@@ -86,17 +84,14 @@
             case cgrect_type: va_arg_p(CGRect)\
             case pointer_type: va_arg_p(void*)\
         } \
-        n++; \
-        types = [ClojureLangRT nextWithId:types]; \
     } \
     va_end(ap); \
-    [NSCommon callWithInvocation:i withSelf:self withTypes:[ClojureLangRT consWithId:retType withId:ttypes] withFn:fn]; \
+    void* r = callWithArgs(args, self, [ClojureLangRT consWithId:retType withId:types], fn); \
+    free(args); \
 
 #define dispatch_args_r(self, sel, type)\
     dispatch_args(self, sel);\
-    type r;\
-    [i getReturnValue:&r];\
-    return r;\
+    return (type)*((type*)r);\
 
 void dispatch_void(id self, SEL sel, ...) {
     dispatch_args(self, sel);
@@ -250,12 +245,12 @@ IMP getDispatch(char c) {
             Method method = class_getInstanceMethod(superc, sel);
             char ret[256];
             method_getReturnType(method, ret, 256);
-            d = getDispatch([NSCommon signatureToType:ret]);
+            d = getDispatch(signatureToType(ret));
             enc = method_getTypeEncoding(method);
         } else {
             id r = [ClojureLangRT firstWithId:types];
             d = getDispatch(to_char(r));
-            enc = [NSCommon makeSignature:types];
+            enc = makeSignature(types);
         }
         class_replaceMethod(clazz, sel, d, enc);
         seq = [ClojureLangRT nextWithId:seq];

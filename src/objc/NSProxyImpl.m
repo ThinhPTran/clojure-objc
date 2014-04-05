@@ -34,7 +34,7 @@
     if (r == nil) {
         [invocation invokeWithTarget:instance];
     } else {
-        [NSCommon callWithInvocation:invocation withSelf:self withTypes:[ClojureLangRT firstWithId:r] withFn:[ClojureLangRT secondWithId:r]];
+        callWithInvocation(invocation, self, [ClojureLangRT firstWithId:r], [ClojureLangRT secondWithId:r]);
     }
 }
 
@@ -52,7 +52,7 @@
     if (r == nil) {
         return [clazz instanceMethodSignatureForSelector:sel];
     } else {
-        return [NSMethodSignature signatureWithObjCTypes:[NSCommon makeSignature:[ClojureLangRT firstWithId:r]]];
+        return [NSMethodSignature signatureWithObjCTypes:makeSignature([ClojureLangRT firstWithId:r])];
     }
 }
 

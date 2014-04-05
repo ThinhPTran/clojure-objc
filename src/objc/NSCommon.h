@@ -39,7 +39,13 @@
 static ClojureLangAtom *dynamicClasses;
 
 #define to_char(c)\
-[ClojureLangRT charCastWithId:c]\
+[(JavaLangCharacter*)c charValue]\
+
+// Necessary for inline functions
+static NSMutableDictionary *global_functions;
+
+#define register_fn(n)\
+[global_functions setObject:[NSValue valueWithPointer:n] forKey:@#n];\
 
 static const char void_type = 'v';
 static const char float_type = 'f';
@@ -66,19 +72,21 @@ static const char cgrect_type = 'R';
 static const char id_type = 'p';
 static const char pointer_type = 'Y';
 
+char signatureToType(const char* c);
+
+id signaturesToTypes(NSMethodSignature* sig, BOOL skip);
+
+const char* makeSignature(id types);
+
+void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn);
+
+void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLangAFn *fn);
+
 @interface NSCommon : NSObject
 
 +(BOOL)cgfloatIsDouble;
 
 +(id)ccall:(id)name types:(id)types args:(id)args;
-
-+(const char*)makeSignature:(id)types;
-
-+(void)callWithInvocation:(NSInvocation *)invocation withSelf:(id)sself withTypes:(id)types withFn:(ClojureLangAFn*)fn;
-
-+(char)signatureToType:(const char*)c;
-
-+(id)signaturesToTypes:(NSMethodSignature*)sig skipSel:(BOOL)skip;
 
 +(id)invokeFun:(NSString*)fun withSelf:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments;
 

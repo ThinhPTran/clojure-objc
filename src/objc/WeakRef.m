@@ -29,7 +29,7 @@
 }
 
 +(WeakRef*)from:(id)o {
-    return [[WeakRef alloc] initWith:o];
+    return [[[WeakRef alloc] initWith:o] autorelease];
 }
 
 - (BOOL)isEqual:(id)f {
