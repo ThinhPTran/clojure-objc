@@ -268,7 +268,11 @@ BOOL use_stret(id object, NSString* selector) {
                 exceptionWithName:@"Method not found"
                 reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
     }
+#ifdef TARGET_OS_IPHONE
+    return sizeof_type(signatureToType([sig methodReturnType])) >= 8;
+#else
     return sizeof_type(signatureToType([sig methodReturnType])) > 8;
+#endif
 }
 
 #define pval(type)\
@@ -815,6 +819,111 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
     }
 }
 
+id boxValue(void* val, char type) {
+    id result;
+    switch (type) {
+        case void_type: {
+            return [NSNull null];
+        }
+        case float_type: {
+            float v = *(float*)val;
+            return [[[JavaLangFloat alloc] initWithFloat:v] autorelease];
+        }
+        case long_type: {
+            long v = (long)*(long*)val;
+            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+        }
+        case longlong_type: {
+            long long v = *(long long*)val;
+            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+        }
+        case char_type: {
+            if (*(char*)val == YES) {
+                return [JavaLangBoolean getTRUE];
+            } else if (*(char*)val == NO) {
+                return [JavaLangBoolean getFALSE];
+            } else {
+                return [[[JavaLangCharacter alloc] initWithChar:*(char*)val] autorelease];
+            }
+        }
+        case short_type: {
+            short v = *(short*)val;
+            return [[[JavaLangShort alloc] initWithShort:v] autorelease];
+            break;
+        }
+        case int_type: {
+            int v = *(int*)val;
+            return [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+        }
+        case double_type: {
+            double v = *(double*)val;
+            return [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+        }
+        case ulong_type: {
+            unsigned long v = (unsigned long)*(unsigned long long*)val;
+            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+        }
+        case ulonglong_type: {
+            unsigned long long v = *(unsigned long long*)val;
+            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+        }
+        case uchar_type: {
+            unsigned char v = *(unsigned char*)val;
+            return [[[JavaLangCharacter alloc] initWithChar:v] autorelease];
+        }
+        case ushort_type: {
+            unsigned short v = *(unsigned short*)val;
+            return [[[JavaLangShort alloc] initWithShort:v] autorelease];
+        }
+        case uint_type: {
+            unsigned int v = *(unsigned int*)val;
+            return [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+        }
+        case bool_type: {
+            return *(char*)val == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
+        }
+        case cgpoint_type: {
+            CGPoint v = *(CGPoint*)val;
+            return [NSValue valueWithCGPoint:v];
+        }
+        case nsrange_type: {
+            NSRange v = *(NSRange*)val;
+            return [NSValue valueWithRange:v];
+        }
+        case uiedge_type: {
+            UIEdgeInsets v = *(UIEdgeInsets*)val;
+            return [NSValue valueWithUIEdgeInsets:v];
+        }
+        case cgsize_type: {
+            CGSize v = *(CGSize*)val;
+            return [NSValue valueWithCGSize:v];
+        }
+        case cgaffinetransform_type: {
+            CGAffineTransform v = *(CGAffineTransform*)val;
+            return [NSValue valueWithCGAffineTransform:v];
+        }
+        case catransform3d_type: {
+            CATransform3D v = *(CATransform3D*)val;
+            return [NSValue valueWithCATransform3D:v];
+        }
+        case uioffset_type: {
+            UIOffset v = *(UIOffset*)val;
+            return [NSValue valueWithUIOffset:v];
+        }
+        case cgrect_type: {
+            CGRect v = *(CGRect*)val;
+            return [NSValue valueWithCGRect:v];
+        }
+        case pointer_type: {
+            void * v = *(void**)val;
+            return [NSValue valueWithPointer:v];
+        }
+        default: {
+            return *(void**)val;
+        }
+    }
+}
+
 #define make_pointer(e,type)\
 type o = e;\
 type *p = malloc(sizeof(type));\
@@ -937,130 +1046,7 @@ static id ccallWithFn(void* fn, ClojureLangPersistentVector *types, id args) {
     free(argument_types);
     free(argument_values);
     
-    id result;
-    switch (retType) {
-        case void_type: {
-            result = [NSNull null];
-            break;
-        }
-        case float_type: {
-            float v = *(float*)result_value;
-            result = [[[JavaLangFloat alloc] initWithFloat:v] autorelease];
-            break;
-        }
-        case long_type: {
-            long v = (long)*(long*)result_value;
-            result = [[[JavaLangLong alloc] initWithLong:v] autorelease];
-            break;
-        }
-        case longlong_type: {
-            long long v = *(long long*)result_value;
-            result = [[[JavaLangLong alloc] initWithLong:v] autorelease];
-            break;
-        }
-        case char_type: {
-            if (*(char*)result_value == YES) {
-                result = [JavaLangBoolean getTRUE];
-            } else if (*(char*)result_value == NO) {
-                result = [JavaLangBoolean getFALSE];
-            } else {
-                result = [[[JavaLangCharacter alloc] initWithChar:*(char*)result_value] autorelease];
-            }
-            break;
-        }
-        case short_type: {
-            short v = *(short*)result_value;
-            result = [[[JavaLangShort alloc] initWithShort:v] autorelease];
-            break;
-        }
-        case int_type: {
-            int v = *(int*)result_value;
-            result = [[[JavaLangInteger alloc] initWithInt:v] autorelease];
-            break;
-        }
-        case double_type: {
-            double v = *(double*)result_value;
-            result = [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
-            break;
-        }
-        case ulong_type: {
-            unsigned long v = (unsigned long)*(unsigned long long*)result_value;
-            result = [[[JavaLangLong alloc] initWithLong:v] autorelease];
-            break;
-        }
-        case ulonglong_type: {
-            unsigned long long v = *(unsigned long long*)result_value;
-            result = [[[JavaLangLong alloc] initWithLong:v] autorelease];
-            break;
-        }
-        case uchar_type: {
-            unsigned char v = *(unsigned char*)result_value;
-            result = [[[JavaLangCharacter alloc] initWithChar:v] autorelease];
-            break;
-        }
-        case ushort_type: {
-            unsigned short v = *(unsigned short*)result_value;
-            result = [[[JavaLangShort alloc] initWithShort:v] autorelease];
-            break;
-        }
-        case uint_type: {
-            unsigned int v = *(unsigned int*)result_value;
-            result = [[[JavaLangInteger alloc] initWithInt:v] autorelease];
-            break;
-        }
-        case bool_type: {
-            result = *(char*)result_value == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
-            break;
-        }
-        case cgpoint_type: {
-            CGPoint v = *(CGPoint*)result_value;
-            result = [NSValue valueWithCGPoint:v];
-            break;
-        }
-        case nsrange_type: {
-            NSRange v = *(NSRange*)result_value;
-            result = [NSValue valueWithRange:v];
-            break;
-        }
-        case uiedge_type: {
-            UIEdgeInsets v = *(UIEdgeInsets*)result_value;
-            result = [NSValue valueWithUIEdgeInsets:v];
-            break;
-        }
-        case cgsize_type: {
-            CGSize v = *(CGSize*)result_value;
-            result = [NSValue valueWithCGSize:v];
-            break;
-        }
-        case cgaffinetransform_type: {
-            CGAffineTransform v = *(CGAffineTransform*)result_value;
-            result = [NSValue valueWithCGAffineTransform:v];
-            break;
-        }
-        case catransform3d_type: {
-            CATransform3D v = *(CATransform3D*)result_value;
-            result = [NSValue valueWithCATransform3D:v];
-            break;
-        }
-        case uioffset_type: {
-            UIOffset v = *(UIOffset*)result_value;
-            result = [NSValue valueWithUIOffset:v];
-            break;
-        }
-        case cgrect_type: {
-            CGRect v = *(CGRect*)result_value;
-            result = [NSValue valueWithCGRect:v];
-            break;
-        }
-        case pointer_type: {
-            void * v = *(void**)result_value;
-            result = [NSValue valueWithPointer:v];
-            break;
-        }
-        default: {
-            result = *(void**)result_value;
-        }
-    }
+    id result = boxValue(result_value, retType);
     free(result_value);
     return result;
 }
@@ -1125,8 +1111,27 @@ const char* makeSignature(id types) {
 
 + (id) invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
 #ifndef __arm64__
+    bool stret = use_stret(object, selector);
+#else
+    bool stret = NO;
+#endif
+    SEL sel = NSSelectorFromString(selector);
+    NSMethodSignature *sig = [([object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object) methodSignatureForSelector:sel];
+    if (sig == nil) {
+        @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
+    }
+    object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
+    if (!stret) {
+        switch ([arguments count]) {
+            case 0: {
+                void *r = objc_msgSend(object, sel);
+                return boxValue(&r, signatureToType([sig methodReturnType]));
+            }
+        }
+    }
+#ifndef __arm64__
     void *s;
-    if (use_stret(object, selector)) {
+    if (stret) {
         s = objc_msgSend_stret;
     } else {
         s = objc_msgSend;
@@ -1134,12 +1139,7 @@ const char* makeSignature(id types) {
 #else
     void *s = objc_msgSend;
 #endif
-    SEL sel = NSSelectorFromString(selector);
-    NSMethodSignature *sig = [([object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object) methodSignatureForSelector:sel];
-    if (sig == nil) {
-        @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
-    }
-    return ccallWithFn(s, signaturesToTypes(sig, NO), [cons invokeWithId:object withId:[cons invokeWithId:[NSValue valueWithPointer:NSSelectorFromString(selector)] withId:arguments]]);
+    return ccallWithFn(s, signaturesToTypes(sig, NO), [cons invokeWithId:object withId:[cons invokeWithId:[NSValue valueWithPointer:sel] withId:arguments]]);
 }
 
 + (id) invokeSuperSel:(id)object withDispatchClass:(id)clazz withSelector:(NSString*)selector
