@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Util{
   
-private static native boolean skip(Object k1) /*-[
+private static native boolean skipCollection(Object k1) /*-[
   return [k1 isMemberOfClass:[ClojureLangSymbol class]] ||
   [k1 isMemberOfClass:[JavaLangCharacter class]] ||
   [k1 isMemberOfClass:[NSString class]] ||
@@ -52,7 +52,7 @@ static public boolean equiv(Object k1, Object k2){
 		{
 		if(k1 instanceof Number && k2 instanceof Number)
 			return Numbers.equal((Number)k1, (Number)k2);
-		else if (ObjC.objc && skip(k1))
+		else if (ObjC.objc && skipCollection(k1))
 		  return k1.equals(k2);
 		else if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
 			return pcequiv(k1,k2);
@@ -87,7 +87,9 @@ static EquivPred equivNumber = new EquivPred(){
 
 static EquivPred equivColl = new EquivPred(){
         public boolean equiv(Object k1, Object k2) {
-            if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
+            if (ObjC.objc && skipCollection(k1))
+              return k1.equals(k2);
+            else if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
                 return pcequiv(k1, k2);
             return k1.equals(k2);
         }
@@ -190,7 +192,7 @@ static public int hash(Object o){
 public static int hasheq(Object o){
 	if(o == null)
 		return 0;
-	if (ObjC.objc && skip(o))
+	if (ObjC.objc && skipCollection(o))
 	  return o.hashCode();
 	else if(o instanceof IHashEq)
 		return dohasheq((IHashEq) o);	

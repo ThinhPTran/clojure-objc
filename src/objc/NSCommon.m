@@ -269,7 +269,7 @@ BOOL use_stret(id object, NSString* selector) {
                 reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
     }
     
-#ifdef TARGET_IPHONE_SIMULATOR
+#if TARGET_IPHONE_SIMULATOR
     return sizeof_type(signatureToType([sig methodReturnType])) > 8;
 #else 
     return sizeof_type(signatureToType([sig methodReturnType])) >= 8;
