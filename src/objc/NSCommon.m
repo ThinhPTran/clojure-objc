@@ -268,10 +268,11 @@ BOOL use_stret(id object, NSString* selector) {
                 exceptionWithName:@"Method not found"
                 reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
     }
-#ifdef TARGET_OS_IPHONE
-    return sizeof_type(signatureToType([sig methodReturnType])) >= 8;
-#else
+    
+#ifdef TARGET_IPHONE_SIMULATOR
     return sizeof_type(signatureToType([sig methodReturnType])) > 8;
+#else 
+    return sizeof_type(signatureToType([sig methodReturnType])) >= 8;
 #endif
 }
 
@@ -1082,15 +1083,17 @@ const char* makeSignature(id types) {
     cons = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"cons"];
     fconj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
     global_functions = [NSMutableDictionary new];
-    [global_functions setObject:[NSValue valueWithPointer:CGRectMake] forKey:@"CGRectMake"];
-    [global_functions setObject:[NSValue valueWithPointer:CGPointMake] forKey:@"CGPointMake"];
-    [global_functions setObject:[NSValue valueWithPointer:CGSizeMake] forKey:@"CGSizeMake"];
-    [global_functions setObject:[NSValue valueWithPointer:CGVectorMake] forKey:@"CGVectorMake"];
-    [global_functions setObject:[NSValue valueWithPointer:UIEdgeInsetsMake] forKey:@"UIEdgeInsetsMake"];
-    [global_functions setObject:[NSValue valueWithPointer:UIEdgeInsetsInsetRect] forKey:@"UIEdgeInsetsInsetRect"];
-    [global_functions setObject:[NSValue valueWithPointer:UIOffsetMake] forKey:@"UIOffsetMake"];
-    [global_functions setObject:[NSValue valueWithPointer:UIEdgeInsetsEqualToEdgeInsets] forKey:@"UIEdgeInsetsEqualToEdgeInsets"];
-    [global_functions setObject:[NSValue valueWithPointer:UIOffsetEqualToOffset] forKey:@"UIOffsetEqualToOffset"];
+    register_fn(objc_msgSend);
+    register_fn(objc_msgSend_stret);
+    register_fn(CGRectMake);
+    register_fn(CGPointMake);
+    register_fn(CGSizeMake);
+    register_fn(CGVectorMake);
+    register_fn(UIEdgeInsetsMake);
+    register_fn(UIEdgeInsetsInsetRect);
+    register_fn(UIOffsetMake);
+    register_fn(UIEdgeInsetsEqualToEdgeInsets);
+    register_fn(UIOffsetEqualToOffset);
 }
 
 +(id)ccall:(id)name types:(ClojureLangPersistentVector*)types args:(id)args {
@@ -1122,11 +1125,9 @@ const char* makeSignature(id types) {
     }
     object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
     if (!stret) {
-        switch ([arguments count]) {
-            case 0: {
-                void *r = objc_msgSend(object, sel);
-                return boxValue(&r, signatureToType([sig methodReturnType]));
-            }
+        if ([arguments count] == 0) {
+            void *r = objc_msgSend(object, sel);
+            return boxValue(&r, signatureToType([sig methodReturnType]));
         }
     }
 #ifndef __arm64__
@@ -1156,7 +1157,7 @@ const char* makeSignature(id types) {
         @throw([NSException exceptionWithName:@"Error invoking superclass objc method. Selector not found" reason:selector userInfo:nil]);
     }
     id types = [assoc invokeWithId:signaturesToTypes(sig, NO) withId:[[[JavaLangInteger alloc] initWithInt:1] autorelease] withId:[[[JavaLangCharacter alloc] initWithChar:pointer_type] autorelease]];
-    id args = [cons invokeWithId:[NSValue valueWithPointer:NSSelectorFromString(selector)] withId:arguments];
+    id args = [cons invokeWithId:[NSValue valueWithPointer:sel] withId:arguments];
     args = [cons invokeWithId:[NSValue valueWithPointer:(void*)&superData] withId:args];
 #ifndef __arm64__
     void *s;
