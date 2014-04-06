@@ -19,7 +19,32 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/*-[
+#include "java/lang/Character.h"
+#include "clojure/lang/Var.h"
+#include "clojure/lang/Keyword.h"
+#include "IOSMappedClass.h"
+#include "IOSProtocolClass.h"
+#include "IOSConcreteClass.h"
+#include "IOSPrimitiveClass.h"
+#include "IOSArrayClass.h"
+]-*/
+
 public class Util{
+  
+private static native boolean skip(Object k1) /*-[
+  return [k1 isMemberOfClass:[ClojureLangSymbol class]] ||
+  [k1 isMemberOfClass:[JavaLangCharacter class]] ||
+  [k1 isMemberOfClass:[NSString class]] ||
+  [k1 isMemberOfClass:[ClojureLangVar class]] ||
+  [k1 isKindOfClass:[ClojureLangKeyword class]] ||
+  [k1 isKindOfClass:[IOSMappedClass class]] ||
+  [k1 isMemberOfClass:[IOSProtocolClass class]] ||
+  [k1 isMemberOfClass:[IOSConcreteClass class]] ||
+  [k1 isMemberOfClass:[IOSArrayClass class]] ||
+  [k1 isMemberOfClass:[IOSPrimitiveClass class]];
+ ]-*/;
+
 static public boolean equiv(Object k1, Object k2){
 	if(k1 == k2)
 		return true;
@@ -27,6 +52,8 @@ static public boolean equiv(Object k1, Object k2){
 		{
 		if(k1 instanceof Number && k2 instanceof Number)
 			return Numbers.equal((Number)k1, (Number)k2);
+		else if (ObjC.objc && skip(k1))
+		  return k1.equals(k2);
 		else if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
 			return pcequiv(k1,k2);
 		return k1.equals(k2);
@@ -163,7 +190,9 @@ static public int hash(Object o){
 public static int hasheq(Object o){
 	if(o == null)
 		return 0;
-	if(o instanceof IHashEq)
+	if (ObjC.objc && skip(o))
+	  return o.hashCode();
+	else if(o instanceof IHashEq)
 		return dohasheq((IHashEq) o);	
 	if(o instanceof Number)
 		return Numbers.hasheq((Number)o);
