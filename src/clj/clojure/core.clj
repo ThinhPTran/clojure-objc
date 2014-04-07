@@ -271,7 +271,8 @@
     :pre and :post that contain collections of pre or post conditions."
    :arglists '([name doc-string? attr-map? [params*] prepost-map? body]
                 [name doc-string? attr-map? ([params*] prepost-map? body)+ attr-map?])
-   :added "1.0"}
+   :added "1.0"
+   :macro true}
  defn (fn defn [&form &env name & fdecl]
         ;; Note: Cannot delegate this check to def because of the call to (with-meta name ..)
         (if (instance? clojure.lang.Symbol name)
@@ -314,8 +315,6 @@
                 ;;todo - restore propagation of fn name
                 ;;must figure out how to convey primitive hints to self calls first
                 (cons `fn fdecl) ))))
-
-(. (var defn) (setMacro))
 
 (defn cast
   "Throws a ClassCastException if x is not a c, else returns x."
@@ -426,7 +425,8 @@
   called."
    :arglists '([name doc-string? attr-map? [params*] body]
                  [name doc-string? attr-map? ([params*] body)+ attr-map?])
-   :added "1.0"}
+   :added "1.0"
+   :macro true}
  defmacro (fn [&form &env
                 name & args]
              (let [prefix (loop [p (list name) args args]
@@ -459,14 +459,10 @@
                    decl (loop [p prefix d fdecl]
                           (if p
                             (recur (next p) (cons (first p) d))
-                            d))]
-               (list 'do
-                     (cons `defn decl)
-                     (list '. (list 'var name) '(setMacro))
-                     (list 'var name)))))
-
-
-(. (var defmacro) (setMacro))
+                            d))
+                   sym (with-meta (first decl) (assoc (meta (first decl)) :macro true))
+                   decl (cons sym (next decl))]
+                (cons `defn decl))))
 
 (defmacro when
   "Evaluates test. If logical true, evaluates body in an implicit do."
@@ -3900,26 +3896,8 @@
   clashes. Use :use in the ns macro in preference to calling this directly."
   {:added "1.0"}
   [ns-sym & filters]
-  (when-not clojure.lang.ObjC/objc
-    (let [ns (or (find-ns ns-sym) (throw (new Exception (str "No namespace: " ns-sym))))
-          fs (apply hash-map filters)
-          nspublics (ns-publics ns)
-          rename (or (:rename fs) {})
-          exclude (set (:exclude fs))
-          to-do (if (= :all (:refer fs))
-                  (keys nspublics)
-                  (or (:refer fs) (:only fs) (keys nspublics)))]
-      (when (and to-do (not (instance? clojure.lang.Sequential to-do)))
-        (throw (new Exception ":only/:refer value must be a sequential collection of symbols")))
-      (doseq [sym to-do]
-        (when-not (exclude sym)
-          (let [v (nspublics sym)]
-            (when-not v
-              (throw (new java.lang.RuntimeException ;IllegalAccessError
-                          (if (get (ns-interns ns) sym)
-                            (str sym " is not public")
-                            (str sym " does not exist")))))
-            (. *ns* (refer (or (rename sym) sym) v))))))))
+  (let [ns (or (find-ns ns-sym) (throw (new Exception (str "No namespace: " ns-sym))))]
+    (.referNs *ns* ns (apply hash-map filters))))
 
 (defn ns-refers
   "Returns a map of the refer mappings for the namespace."
@@ -4786,7 +4764,8 @@
   it were a macro. Cannot be used with variadic (&) args."
   {:added "1.0"}
   [name & decl]
-  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
+  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)
+        name (symbol (str (clojure.core/name name) "_inline"))]
     `(do
        (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
        (alter-meta! (var ~name) assoc :inline (fn ~name ~args ~expr))

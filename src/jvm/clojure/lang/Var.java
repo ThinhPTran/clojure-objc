@@ -77,6 +77,7 @@ static Keyword privateKey = Keyword.intern(null, "private");
 static IPersistentMap privateMeta = new PersistentArrayMap(new Object[]{privateKey, Boolean.TRUE});
 static Keyword macroKey = Keyword.intern(null, "macro");
 static Keyword nameKey = Keyword.intern(null, "name");
+static Keyword forceKey = Keyword.intern(null, "force");
 static Keyword nsKey = Keyword.intern(null, "ns");
 //static Keyword tagKey = Keyword.intern(null, "tag");
 
@@ -155,7 +156,30 @@ public static Var internPrivate(String nsName, String sym){
 }
 
 public static Var intern(Namespace ns, Symbol sym){
-	return ns.intern(sym);
+  Var v = ns.intern(sym);
+  if (!v.isBound()) {
+    maybeLoadFromClass(ns.toString(), sym.toString());
+  }
+  return v;
+}
+
+public static Var maybeLoadFromClass(String ns, String sym){
+  if (!ObjC.objc) {
+    String ns_sym = clojure.lang.Compiler.munge(ns + Compiler.DOLLAR + sym.replace(".", "_DOT_"));
+    try {
+      Class c = Class.forName(ns_sym);
+      Var v = (Var) c.getDeclaredField("VAR").get(null);
+      return v;
+    } catch (Throwable e) {
+      return null;
+    }
+  } else {
+    return null;
+  }
+}
+
+public void maybeLoad() {
+  maybeLoadFromClass(ns.toString(), sym.toString());
 }
 
 
@@ -273,7 +297,6 @@ synchronized public void bindRoot(Object root){
 	Object oldroot = this.root;
 	this.root = root;
 	++rev;
-        alterMeta(dissoc, RT.list(macroKey));
     notifyWatches(oldroot,this.root);
 }
 

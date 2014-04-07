@@ -31,6 +31,13 @@ public class MultiFn extends AFn {
   static final Var isa = RT.var("clojure.core", "isa?");
   static final Var parents = RT.var("clojure.core", "parents");
 
+  static {
+    assoc.maybeLoad();
+    dissoc.maybeLoad();
+    isa.maybeLoad();
+    parents.maybeLoad();
+  }
+  
   public MultiFn(String name, IFn dispatchFn, Object defaultDispatchVal,
       IRef hierarchy) {
     this.rw = new ReentrantReadWriteLock();

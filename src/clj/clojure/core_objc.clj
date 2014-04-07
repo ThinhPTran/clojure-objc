@@ -1,6 +1,6 @@
 (in-ns 'clojure.core)
 
-(use 'clojure.walk)
+(require '[clojure.walk :as walk])
 
 (def ^:dynamic dispatch-class)
 
@@ -243,7 +243,7 @@
   [na super & methods]
   (let [methods
         (binding [dispatch-class (name na)]
-          (mapv macroexpand-all methods))
+          (mapv walk/macroexpand-all methods))
         na (name na)
         super (name super)
         i (map (fn [[args & body]]
