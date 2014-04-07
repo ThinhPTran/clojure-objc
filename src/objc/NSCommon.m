@@ -1124,11 +1124,157 @@ const char* makeSignature(id types) {
         @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
     }
     object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
-    if (!stret) {
-        if ([arguments count] == 0) {
-            void *r = objc_msgSend(object, sel);
-            return boxValue(&r, signatureToType([sig methodReturnType]));
-        }
+    char ret = signatureToType([sig methodReturnType]);
+        switch ([arguments count]) {
+            case 0: {
+                if (stret) {
+                    switch (ret) {
+                        case cgrect_type: {
+                            CGRect r = ((CGRect(*)(id, SEL))objc_msgSend_stret)(object, sel);
+                            return boxValue(&r, ret);
+                        }
+                        case cgsize_type: {
+                            CGSize r = ((CGSize(*)(id, SEL))objc_msgSend_stret)(object, sel);
+                            return boxValue(&r, ret);
+                        }
+                    }
+                } else {
+                    void *r = objc_msgSend(object, sel);
+                    return boxValue(&r, ret);
+                }
+            }
+                
+            case 1: {
+                if (stret) {
+                    switch (signatureToType([sig getArgumentTypeAtIndex:2])) {
+                        case id_type: {
+                            switch (ret) {
+                                case cgsize_type: {
+                                    id v = [arguments first];
+                                    return [NSValue valueWithCGSize:((CGSize(*)(id, SEL, id))objc_msgSend_stret)(object, sel, [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v)];
+                                }
+                            }
+                            break;
+                        }
+                    }
+                } else {
+                    void *r;
+                    id v = [arguments first];
+                    switch (signatureToType([sig getArgumentTypeAtIndex:2])) {
+                        case id_type: {
+                            r = objc_msgSend(object, sel, [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v);
+                            break;
+                        }
+                        case int_type:
+                        case uint_type: {
+                            r = objc_msgSend(object, sel, [ClojureLangRT intCastWithId:v]);
+                            break;
+                        }
+                        case ulonglong_type:
+                        case ulong_type:
+                        case long_type:
+                        case longlong_type: {
+                            r = objc_msgSend(object, sel, [ClojureLangRT longCastWithId:v]);
+                            break;
+                        }
+                        case float_type: {
+                            float f = [ClojureLangRT floatCastWithId:v];
+                            r = objc_msgSend(object, sel, *(int*)&f);
+                            break;
+                        }
+                        case uchar_type:
+                        case char_type: {
+                            r = objc_msgSend(object, sel, v == [JavaLangBoolean getTRUE] ? YES :
+                                             (v == [JavaLangBoolean getFALSE] ? NO : [ClojureLangRT charCastWithId:v]));
+                            break;
+                        }
+                        case ushort_type:
+                        case short_type: {
+                            r = objc_msgSend(object, sel, [ClojureLangRT shortCastWithId:v]);
+                            break;
+                        }
+                        case double_type: {
+                            r = objc_msgSend(object, sel, [ClojureLangRT doubleCastWithId:v]);
+                            break;
+                        }
+                        case bool_type: {
+                            r = objc_msgSend(object, sel, [ClojureLangRT booleanCastWithId:v]);
+                            break;
+                        }
+                        case pointer_type: {
+                            r = objc_msgSend(object, sel, [v isKindOfClass:[ClojureLangSelector class]] ? NSSelectorFromString  ([(ClojureLangSelector*)v getName]) : [(NSValue*)v pointerValue]);
+                            break;
+                        }
+                        case cgpoint_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v CGPointValue]);
+                            break;
+                        }
+                        case nsrange_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v rangeValue]);
+                            break;
+                        }
+                        case uiedge_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v UIEdgeInsetsValue]);
+                            break;
+                        }
+                        case cgsize_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v CGSizeValue]);
+                            break;
+                        }
+                        case cgaffinetransform_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v CGAffineTransformValue]);
+                            break;
+                        }
+                        case catransform3d_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v CATransform3DValue]);
+                            break;
+                        }
+                        case uioffset_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v UIOffsetValue]);
+                            break;
+                        }
+                        case cgrect_type: {
+                            r = objc_msgSend(object, sel, [(NSValue*)v CGRectValue]);
+                            break;
+                        }
+                    }
+                    return boxValue(&r, ret);
+                }
+                skip: break;
+            }
+            case 2: {
+                if (stret) {
+                    if (signatureToType([sig getArgumentTypeAtIndex:2]) == cgpoint_type && signatureToType([sig getArgumentTypeAtIndex:3]) == id_type) {
+                        switch (ret) {
+                            case cgsize_type: {
+                                id p1 = [ClojureLangRT nthFromWithId:arguments withInt:0];
+                                id p2 = [ClojureLangRT nthFromWithId:arguments withInt:1];
+                                return [NSValue valueWithCGSize:((CGSize(*)(id, SEL, CGPoint, id))objc_msgSend_stret)
+                                        (object, sel, [(NSValue*)p1 CGPointValue],
+                                         [p2 isKindOfClass:[WeakRef class]] ? [(WeakRef*)p2 deref] : p2)];
+                            }
+                        }
+                    }
+                } else {
+                    if (signatureToType([sig getArgumentTypeAtIndex:2]) == id_type && signatureToType([sig getArgumentTypeAtIndex:3]) == id_type) {
+                        id p1 = [ClojureLangRT nthFromWithId:arguments withInt:0];
+                        id p2 = [ClojureLangRT nthFromWithId:arguments withInt:1];
+                        void *r = objc_msgSend(object, sel, [p1 isKindOfClass:[WeakRef class]] ? [(WeakRef*)p1 deref] : p1
+                                           , [p2 isKindOfClass:[WeakRef class]] ? [(WeakRef*)p2 deref] : p2);
+                        return boxValue(&r, ret);
+                    } else if (signatureToType([sig getArgumentTypeAtIndex:2]) == cgpoint_type && signatureToType([sig getArgumentTypeAtIndex:3]) == id_type) {
+                        id p1 = [ClojureLangRT nthFromWithId:arguments withInt:0];
+                        id p2 = [ClojureLangRT nthFromWithId:arguments withInt:1];
+                        void *r = objc_msgSend(object, sel, [(NSValue*)p1 CGPointValue]
+                                           , [p2 isKindOfClass:[WeakRef class]] ? [(WeakRef*)p2 deref] : p2);
+                        return boxValue(&r, ret);
+                    }
+                }
+            }
+    }
+    
+    if ([selector isEqualToString:@"ccall:types:args:"]) {
+        return [NSCommon ccall:[ClojureLangRT nthFromWithId:arguments withInt:0] types:[ClojureLangRT nthFromWithId:arguments withInt:1] args:[ClojureLangRT nthFromWithId:arguments withInt:2]];
     }
 #ifndef __arm64__
     void *s;
