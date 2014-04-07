@@ -235,7 +235,7 @@ public static Namespace find(Symbol name){
 
 public Object getMapping(Symbol name) {
   Object val = mappings.get().valAt(name);
-  if (val == null) {
+  if (val == null && !ObjC.objc) {
     val = Var.maybeLoadFromClass(this.name.toString(), name.toString());
     if (val == null) {
       val = searchMapping(name);
@@ -284,7 +284,11 @@ public Var findInternedVar(Symbol symbol){
 	Object o = getMapping(symbol);
 	if(o != null && o instanceof Var && ((Var) o).ns == this)
 		return (Var) o;
-	return Var.maybeLoadFromClass(name.toString(), symbol.toString());
+	if (!ObjC.objc) {
+	  return Var.maybeLoadFromClass(name.toString(), symbol.toString());
+	} else {
+	  return null;
+	}
 }
 
 

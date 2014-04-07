@@ -15,6 +15,13 @@ package clojure.lang;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/*-[
+#include "clojure/core_assoc.h"
+#include "clojure/core_dissoc.h"
+#include "clojure/core_isa_QMARK_.h"
+#include "clojure/core_parents.h"
+]-*/
+
 public class MultiFn extends AFn {
   final public IFn dispatchFn;
   final public Object defaultDispatchVal;
@@ -31,11 +38,22 @@ public class MultiFn extends AFn {
   static final Var isa = RT.var("clojure.core", "isa?");
   static final Var parents = RT.var("clojure.core", "parents");
 
+  static native void loadFns() /*-[
+    [Clojurecore_assoc VAR];
+    [Clojurecore_dissoc VAR];
+    [Clojurecore_isa_QMARK_ VAR];
+    [Clojurecore_parents VAR];
+  ]-*/;
+  
   static {
-    assoc.maybeLoad();
-    dissoc.maybeLoad();
-    isa.maybeLoad();
-    parents.maybeLoad();
+    if (ObjC.objc) { 
+      loadFns();
+    } else {
+      assoc.maybeLoad();
+      dissoc.maybeLoad();
+      isa.maybeLoad();
+      parents.maybeLoad();  
+    }
   }
   
   public MultiFn(String name, IFn dispatchFn, Object defaultDispatchVal,

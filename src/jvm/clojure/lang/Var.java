@@ -157,31 +157,46 @@ public static Var internPrivate(String nsName, String sym){
 
 public static Var intern(Namespace ns, Symbol sym){
   Var v = ns.intern(sym);
-  if (!v.isBound()) {
+  if (!v.isBound() && !ObjC.objc) {
     maybeLoadFromClass(ns.toString(), sym.toString());
   }
   return v;
 }
 
 public static Var maybeLoadFromClass(String ns, String sym){
-  if (!ObjC.objc) {
-    String ns_sym = clojure.lang.Compiler.munge(ns + Compiler.DOLLAR + sym.replace(".", "_DOT_"));
-    try {
-      Class c = Class.forName(ns_sym);
-      Var v = (Var) c.getDeclaredField("VAR").get(null);
-      return v;
-    } catch (Throwable e) {
-      return null;
-    }
-  } else {
+  String ns_sym = buildClassName(ns, sym);
+  try {
+    Class c = Class.forName(ns_sym);
+    Var v = (Var) c.getDeclaredField("VAR").get(null);
+    return v;
+  } catch (Throwable e) {
     return null;
   }
 }
 
-public void maybeLoad() {
-  maybeLoadFromClass(ns.toString(), sym.toString());
+private static String buildClassName(String ns, String sym) {
+  return clojure.lang.Compiler.munge(ns + Compiler.DOLLAR + sym.replace(".", "_DOT_"));
 }
 
+public void maybeLoad() {
+  if (ObjC.objc) {
+    loadFromClass(buildClassName(ns.toString(), sym.toString()));
+  } else {
+    maybeLoadFromClass(ns.toString(), sym.toString());
+  }
+}
+
+
+private native void loadFromClass(String clazz) /*-[
+  IOSObjectArray *parts = [clazz split:@"\\."];
+  NSString *classname = @"";
+  for (int n = 0; n < parts.count - 1; n++) {
+    NSString *s = (NSString*)[parts objectAtIndex:n];
+    classname = [classname stringByAppendingString:[[[s substringToIndex:1] uppercaseString] stringByAppendingString:[s substringFromIndex:1]]];
+  }
+  classname = [classname stringByAppendingString:[parts objectAtIndex:parts.count-1]];
+  [NSClassFromString(classname) VAR];
+]-*/;
 
 public static Var create(){
 	return new Var(null, null);
