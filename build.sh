@@ -1,4 +1,4 @@
-#mvn clean
+mvn clean
 mvn compile
 mvn test-compile
 rm -Rf target/objc

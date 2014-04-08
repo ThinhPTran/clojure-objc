@@ -1084,7 +1084,9 @@ const char* makeSignature(id types) {
     fconj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
     global_functions = [NSMutableDictionary new];
     register_fn(objc_msgSend);
+#ifndef __arm64__
     register_fn(objc_msgSend_stret);
+#endif
     register_fn(CGRectMake);
     register_fn(CGPointMake);
     register_fn(CGSizeMake);
