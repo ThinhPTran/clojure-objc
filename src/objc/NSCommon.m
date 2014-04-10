@@ -1140,6 +1140,10 @@ return [NSValue valueWithCATransform3D:((CATransform3D(*)params)fun)(object, sel
 case uioffset_type: {\
 return [NSValue valueWithUIOffset:((UIOffset(*)params)fun)(object, sel, ##__VA_ARGS__)];\
 }\
+case float_type: { \
+float r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
+return [[[JavaLangFloat alloc] initWithFloat:r] autorelease]; \
+} \
 default: { \
 void *r = objc_msgSend(object, sel, ##__VA_ARGS__); \
 return boxValue(&r, ret); \
@@ -1158,17 +1162,26 @@ return boxValue(&r, ret); \
         @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
     }
     object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
+    char ret = signatureToType([sig methodReturnType]);
 #ifndef __arm64__
     void *fun;
     if (stret) {
         fun = objc_msgSend_stret;
     } else {
-        fun = objc_msgSend;
+        if (ret == float_type) {
+            fun = objc_msgSend_fpret;
+        } else {
+            fun = objc_msgSend;
+        }
     }
 #else
-    void *fun = objc_msgSend;
+    void *fun;
+    if (ret == float_type) {
+        fun = objc_msgSend_fpret;
+    } else {
+        fun = objc_msgSend;
+    }
 #endif
-    char ret = signatureToType([sig methodReturnType]);
     switch ([arguments count]) {
         case 0: {
             structmsg((id, SEL));
