@@ -106,6 +106,7 @@ const char* encode_type(char d) {
         case short_type: return @encode(short);
         case int_type: return @encode(int);
         case double_type: return @encode(double);
+        case longdouble_type: return @encode(long double);
         case ulong_type: return @encode(unsigned long);
         case ulonglong_type: return @encode(unsigned long long);
         case uchar_type: return @encode(unsigned char);
@@ -136,6 +137,7 @@ void * ffi_type_for_type(char type) {
         case short_type: return &ffi_type_sshort;
         case int_type: return &ffi_type_sint;
         case double_type: return &ffi_type_double;
+        case longdouble_type: return &ffi_type_longdouble;
         case ulonglong_type: return &ffi_type_uint64;
         case ulong_type: return &ffi_type_ulong;
         case uchar_type: return &ffi_type_uchar;
@@ -164,6 +166,7 @@ int sizeof_type(char c) {
         case short_type: return sizeof(short);
         case int_type: return sizeof(int);
         case double_type: return sizeof(double);
+        case longdouble_type: return sizeof(long double);
         case ulong_type: return sizeof(unsigned long);
         case ulonglong_type: return sizeof(unsigned long long);
         case uchar_type: return sizeof(unsigned char);
@@ -220,6 +223,7 @@ char signatureToType(const char* c) {
         case _C_USHT: return ushort_type;
         case _C_UINT: return uint_type;
         case _C_VOID: return void_type;
+        case 'D': return longdouble_type;
         case _C_CHARPTR:
         case _C_SEL:
         case _C_PTR:
@@ -259,21 +263,26 @@ void * malloc_ret(char c) {
 }
 
 // https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/iPhoneOSABIReference.pdf
-BOOL use_stret(id object, NSString* selector) {
-    SEL sel = NSSelectorFromString(selector);
-    object = [object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object;
-    NSMethodSignature *sig = [object methodSignatureForSelector:sel];
-    if (sig == nil) {
-        @throw [NSException
-                exceptionWithName:@"Method not found"
-                reason:[selector stringByAppendingString:[@" on type " stringByAppendingString:[[object class] description]]] userInfo:nil];
-    }
-    
+BOOL use_stret(char ret) {
+    switch (ret) {
+        case cgrect_type:
+        case cgpoint_type:
+        case nsrange_type:
+        case uiedge_type:
+        case cgsize_type:
+        case cgaffinetransform_type:
+        case catransform3d_type:
+        case uioffset_type: {
+            int size = sizeof_type(ret);
 #if TARGET_IPHONE_SIMULATOR
-    return sizeof_type(signatureToType([sig methodReturnType])) > 8;
-#else 
-    return sizeof_type(signatureToType([sig methodReturnType])) >= 8;
+            return size > 8;
+#else
+            return size >= 8;
 #endif
+            break;
+        }
+    }
+    return NO;
 }
 
 #define pval(type)\
@@ -314,6 +323,10 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
             }
             case int_type: {
                 val = [[[JavaLangInteger alloc] initWithInt:pval(int)] autorelease];
+                break;
+            }
+            case longdouble_type: {
+                val = [[[JavaLangDouble alloc] initWithDouble:pval(long double)] autorelease];
                 break;
             }
             case double_type: {
@@ -434,6 +447,11 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
             ret = &o;
             break;
         }
+        case longdouble_type: {
+            long double o = [ClojureLangRT doubleCastWithId:v];
+            ret = &o;
+            break;
+        }
         case double_type: {
             double o = [ClojureLangRT doubleCastWithId:v];
             ret = &o;
@@ -522,7 +540,7 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
             @throw [NSException exceptionWithName:@"Missing type" reason:[NSString stringWithFormat:@"%c", retType] userInfo:nil];
         }
     }
-
+    
     return ret;
 }
 
@@ -573,6 +591,12 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
                 int v;
                 [invocation getArgument:&v atIndex: j];
                 val = [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+                break;
+            }
+            case longdouble_type: {
+                long double v;
+                [invocation getArgument:&v atIndex: j];
+                val = [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
                 break;
             }
             case double_type: {
@@ -732,6 +756,11 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
             ret = &o;
             break;
         }
+        case longdouble_type: {
+            long double o = [ClojureLangRT doubleCastWithId:v];
+            ret = &o;
+            break;
+        }
         case ulong_type: {
             unsigned long o = (unsigned long)[ClojureLangRT longCastWithId:v];
             ret = &o;
@@ -857,15 +886,29 @@ id boxValue(void* val, char type) {
             return [[[JavaLangInteger alloc] initWithInt:v] autorelease];
         }
         case double_type: {
+#if TARGET_CPU_ARM
+            double v;
+            memcpy(val, &v, sizeof(double));
+#else
             double v = *(double*)val;
+#endif
+            return [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+        }
+        case longdouble_type: {
+#if TARGET_CPU_ARM
+            long double v;
+            memcpy(val, &v, sizeof(long double));
+#else
+            long double v = *(long double*)val;
+#endif
             return [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
         }
         case ulong_type: {
-            unsigned long v = (unsigned long)*(unsigned long long*)val;
+            unsigned long v = (unsigned long)*(unsigned long*)val;
             return [[[JavaLangLong alloc] initWithLong:v] autorelease];
         }
         case ulonglong_type: {
-            unsigned long long v = *(unsigned long long*)val;
+            unsigned long long v = (unsigned long long)*(unsigned long long*)val;
             return [[[JavaLangLong alloc] initWithLong:v] autorelease];
         }
         case uchar_type: {
@@ -974,6 +1017,9 @@ static id ccallWithFn(void* fn, ClojureLangPersistentVector *types, id args) {
             }
             case double_type: {
                 make_pointer([ClojureLangRT doubleCastWithId:v], double);
+            }
+            case longdouble_type: {
+                make_pointer([ClojureLangRT doubleCastWithId:v], long double);
             }
             case ulong_type: {
                 make_pointer((unsigned long)[ClojureLangRT longCastWithId:v], unsigned long);
@@ -1084,7 +1130,9 @@ const char* makeSignature(id types) {
     fconj = [ClojureLangRT varWithNSString:@"clojure.core" withNSString:@"conj"];
     global_functions = [NSMutableDictionary new];
     register_fn(objc_msgSend);
+#ifndef __arm64__
     register_fn(objc_msgSend_stret);
+#endif
     register_fn(CGRectMake);
     register_fn(CGPointMake);
     register_fn(CGSizeMake);
@@ -1112,35 +1160,195 @@ const char* makeSignature(id types) {
     return ccallWithFn(fn, types, args);
 }
 
-+ (id) invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
-#ifndef __arm64__
-    bool stret = use_stret(object, selector);
+#if TARGET_CPU_X86
+#define structmsgf(params, ...) \
+case float_type: { \
+float r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
+return [[[JavaLangFloat alloc] initWithFloat:r] autorelease]; \
+} \
+case double_type: { \
+double r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
+return [[[JavaLangDouble alloc] initWithDouble:r] autorelease]; \
+} \
+case longdouble_type: { \
+long double r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
+return [[[JavaLangDouble alloc] initWithDouble:r] autorelease]; \
+}
+#elif TARGET_CPU_X86_64
+#define structmsgf(params, ...) \
+case longdouble_type: { \
+long double r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
+return [[[JavaLangDouble alloc] initWithDouble:r] autorelease]; \
+}
 #else
-    bool stret = NO;
+#define structmsgf(params, ...)
 #endif
+
+#define structmsg(params, ...) \
+switch (ret) { \
+case cgrect_type: { \
+return [NSValue valueWithCGRect:((CGRect(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case cgsize_type: {\
+return [NSValue valueWithCGSize:((CGSize(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case cgpoint_type: {\
+return [NSValue valueWithCGPoint:((CGPoint(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case nsrange_type: {\
+return [NSValue valueWithRange:((NSRange(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case uiedge_type: {\
+return [NSValue valueWithUIEdgeInsets:((UIEdgeInsets(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case cgaffinetransform_type: {\
+return [NSValue valueWithCGAffineTransform:((CGAffineTransform(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case catransform3d_type: {\
+return [NSValue valueWithCATransform3D:((CATransform3D(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+case uioffset_type: {\
+return [NSValue valueWithUIOffset:((UIOffset(*)params)fun)(object, sel, ##__VA_ARGS__)];\
+}\
+structmsgf(params, ##__VA_ARGS__) \
+default: { \
+void *r = objc_msgSend(object, sel, ##__VA_ARGS__); \
+return boxValue(&r, ret); \
+} \
+}\
+
++ (id) invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
     SEL sel = NSSelectorFromString(selector);
     NSMethodSignature *sig = [([object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object) methodSignatureForSelector:sel];
     if (sig == nil) {
         @throw([NSException exceptionWithName:@"Error invoking objc method. Selector not found" reason:selector userInfo:nil]);
     }
-    object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
-    if (!stret) {
-        if ([arguments count] == 0) {
-            void *r = objc_msgSend(object, sel);
-            return boxValue(&r, signatureToType([sig methodReturnType]));
-        }
-    }
+    char ret = signatureToType([sig methodReturnType]);
 #ifndef __arm64__
-    void *s;
+    bool stret = use_stret(ret);
+#else
+    bool stret = NO;
+#endif
+    object = [object isKindOfClass:[WeakRef class]] ? [object deref] : object;
+#ifndef __arm64__
+    void *fun;
     if (stret) {
-        s = objc_msgSend_stret;
+        fun = objc_msgSend_stret;
     } else {
-        s = objc_msgSend;
+#if TARGET_CPU_X86 || TARGET_CPU_X86_64
+        if (ret == float_type) {
+            fun = objc_msgSend_fpret;
+        } else {
+#endif
+            fun = objc_msgSend;
+#if TARGET_CPU_X86 || TARGET_CPU_X86_64
+        }
+#endif
+        
     }
 #else
-    void *s = objc_msgSend;
+    void *fun;
+    if (ret == float_type) {
+        fun = objc_msgSend_fpret;
+    } else {
+        fun = objc_msgSend;
+    }
 #endif
-    return ccallWithFn(s, signaturesToTypes(sig, NO), [cons invokeWithId:object withId:[cons invokeWithId:[NSValue valueWithPointer:sel] withId:arguments]]);
+    // TODO: ulonglong return fails with structmsg
+    if (ret != ulonglong_type) {
+        switch ([arguments count]) {
+            case 0: {
+                structmsg((id, SEL));
+                break;
+            }
+                
+            case 1: {
+                id v = [arguments first];
+                switch (signatureToType([sig getArgumentTypeAtIndex:2])) {
+                    case id_type: {
+                        structmsg((id, SEL, id), [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v);
+                    }
+                    case int_type: {
+                        structmsg((id, SEL, int), [ClojureLangRT intCastWithId:v]);
+                    }
+                    case uint_type: {
+                        structmsg((id, SEL, unsigned int), [ClojureLangRT intCastWithId:v]);
+                    }
+                    case ulonglong_type: {
+                        structmsg((id, SEL, unsigned long long), (unsigned long long)[ClojureLangRT longCastWithId:v]);
+                    }
+                    case ulong_type: {
+                        structmsg((id, SEL, unsigned long), (unsigned long)[ClojureLangRT longCastWithId:v]);
+                    }
+                    case long_type: {
+                        structmsg((id, SEL, long), (long)[ClojureLangRT longCastWithId:v]);
+                    }
+                    case longlong_type: {
+                        structmsg((id, SEL, long long), (long long)[ClojureLangRT longCastWithId:v]);
+                    }
+                    case float_type: {
+                        float f = [ClojureLangRT floatCastWithId:v];
+                        structmsg((id, SEL, float), *(int*)&f);
+                    }
+                    case uchar_type: {
+                        structmsg((id, SEL, unsigned char), (unsigned char)[ClojureLangRT charCastWithId:v]);
+                    }
+                    case char_type: {
+                        structmsg((id, SEL, char), v == [JavaLangBoolean getTRUE] ? YES :
+                                  (v == [JavaLangBoolean getFALSE] ? NO : [ClojureLangRT charCastWithId:v]));
+                    }
+                    case ushort_type: {
+                        structmsg((id, SEL, unsigned short), (unsigned short)[ClojureLangRT shortCastWithId:v]);
+                    }
+                    case short_type: {
+                        structmsg((id, SEL, short), [ClojureLangRT shortCastWithId:v]);
+                    }
+                    case double_type: {
+                        structmsg((id, SEL, double), [ClojureLangRT doubleCastWithId:v]);
+                    }
+                    case longdouble_type: {
+                        structmsg((id, SEL, long double), (long double)[ClojureLangRT doubleCastWithId:v]);
+                    }
+                    case bool_type: {
+                        structmsg((id, SEL, bool), [ClojureLangRT booleanCastWithId:v]);
+                    }
+                    case pointer_type: {
+                        structmsg((id, SEL, void*), [v isKindOfClass:[ClojureLangSelector class]] ? NSSelectorFromString  ([(ClojureLangSelector*)v getName]) : [(NSValue*)v pointerValue]);
+                    }
+                    case cgpoint_type: {
+                        structmsg((id, SEL, CGPoint), [(NSValue*)v CGPointValue]);
+                    }
+                    case nsrange_type: {
+                        structmsg((id, SEL, NSRange), [(NSValue*)v rangeValue]);
+                    }
+                    case uiedge_type: {
+                        structmsg((id, SEL, UIEdgeInsets), [(NSValue*)v UIEdgeInsetsValue]);
+                    }
+                    case cgsize_type: {
+                        structmsg((id, SEL, CGSize), [(NSValue*)v CGSizeValue]);
+                    }
+                    case cgaffinetransform_type: {
+                        structmsg((id, SEL, CGAffineTransform), [(NSValue*)v CGAffineTransformValue]);
+                    }
+                    case catransform3d_type: {
+                        structmsg((id, SEL, CATransform3D), [(NSValue*)v CATransform3DValue]);
+                    }
+                    case uioffset_type: {
+                        structmsg((id, SEL, UIOffset), [(NSValue*)v UIOffsetValue]);
+                    }
+                    case cgrect_type: {
+                        structmsg((id, SEL, CGRect), [(NSValue*)v CGRectValue]);
+                    }
+                }
+                break;
+            }
+        }
+    }
+    
+    if ([selector isEqualToString:@"ccall:types:args:"]) {
+        return [NSCommon ccall:[ClojureLangRT nthFromWithId:arguments withInt:0] types:[ClojureLangRT nthFromWithId:arguments withInt:1] args:[ClojureLangRT nthFromWithId:arguments withInt:2]];
+    }
+    return ccallWithFn(fun, signaturesToTypes(sig, NO), [cons invokeWithId:object withId:[cons invokeWithId:[NSValue valueWithPointer:sel] withId:arguments]]);
 }
 
 + (id) invokeSuperSel:(id)object withDispatchClass:(id)clazz withSelector:(NSString*)selector
@@ -1151,7 +1359,7 @@ const char* makeSignature(id types) {
         objc_setAssociatedObject(object, "__dispatch_class__", clazz, 1);
     }
     struct objc_super superData = {object, clazz};
-
+    
     NSMethodSignature *sig = [object methodSignatureForSelector:sel];
     if (sig == nil) {
         @throw([NSException exceptionWithName:@"Error invoking superclass objc method. Selector not found" reason:selector userInfo:nil]);
@@ -1161,7 +1369,7 @@ const char* makeSignature(id types) {
     args = [cons invokeWithId:[NSValue valueWithPointer:(void*)&superData] withId:args];
 #ifndef __arm64__
     void *s;
-    if (use_stret(object, selector)) {
+    if (use_stret(signatureToType([sig methodReturnType]))) {
         s = objc_msgSendSuper_stret;
     } else {
         s = objc_msgSendSuper;

@@ -45,6 +45,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/*-[
+#include "clojure/core_ns.h"
+]-*/
+
 public class RT {
 
   static final public Boolean T = Boolean.TRUE;// Keyword.intern(Symbol.intern(null,
@@ -374,6 +378,12 @@ public class RT {
         arglistskw, list(vector(namesym))));
     try {
       doInit();
+      if (ObjC.objc) {
+        loadFns();
+      } else {
+        Var.maybeLoadFromClass("clojure.core", "ns");
+        Var.maybeLoadFromClass("clojure.core", "in-ns");
+      }
     } catch (Exception e) {
       throw Util.sneakyThrow(e);
     }
@@ -403,6 +413,10 @@ public class RT {
       throw Util.sneakyThrow(e);
     }
   }
+
+private native static void loadFns() /*-[
+  [Clojurecore_ns VAR];
+]-*/;
 
 static public void addURL(Object url) throws MalformedURLException{
 	URL u = (url instanceof String) ? (new URL((String) url)) : (URL) url;
