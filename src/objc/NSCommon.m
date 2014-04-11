@@ -1160,6 +1160,50 @@ return [ClojureLangRT boxWithDouble:((long double(*)params)objc_msgSend)(object,
 
 #define dispatch_fast(params, ...) \
 switch (ret) { \
+case void_type: { \
+objc_msgSend(object, sel, ##__VA_ARGS__); \
+return nil;\
+} \
+case int_type: { \
+return [ClojureLangRT boxWithInt:((int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case bool_type: { \
+return ((BOOL(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE]; \
+} \
+case id_type: { \
+return ((id(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
+} \
+case pointer_type: { \
+return [NSValue valueWithPointer:((void*(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)];\
+} \
+case longlong_type: { \
+return [ClojureLangRT boxWithLong:((long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case long_type: { \
+return [ClojureLangRT boxWithLong:((long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case char_type: { \
+char charv = ((char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
+return charv == YES ? [JavaLangBoolean getTRUE] : (charv == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:charv]); \
+} \
+case short_type: { \
+return [ClojureLangRT boxWithShort:((short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ulong_type: { \
+return [ClojureLangRT boxWithLong:((unsigned long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ulonglong_type: { \
+return [ClojureLangRT boxWithLong:((unsigned long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case uchar_type: { \
+return [ClojureLangRT boxWithChar:((unsigned char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ushort_type: { \
+return [ClojureLangRT boxWithShort:((unsigned short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case uint_type: { \
+return [ClojureLangRT boxWithInt:((unsigned int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
 case cgrect_type: { \
 return [NSValue valueWithCGRect:((CGRect(*)params)fun)(object, sel, ##__VA_ARGS__)];\
 }\
@@ -1185,50 +1229,6 @@ case uioffset_type: {\
 return [NSValue valueWithUIOffset:((UIOffset(*)params)fun)(object, sel, ##__VA_ARGS__)];\
 }\
 dispatch_fastf(params, ##__VA_ARGS__) \
-case void_type: { \
-objc_msgSend(object, sel, ##__VA_ARGS__); \
-return nil;\
-} \
-case longlong_type: { \
-return [ClojureLangRT boxWithLong:((long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case long_type: { \
-return [ClojureLangRT boxWithLong:((long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case char_type: { \
-char charv = ((char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
-return charv == YES ? [JavaLangBoolean getTRUE] : (charv == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:charv]); \
-} \
-case short_type: { \
-return [ClojureLangRT boxWithShort:((short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case int_type: { \
-return [ClojureLangRT boxWithInt:((int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case ulong_type: { \
-return [ClojureLangRT boxWithLong:((unsigned long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case ulonglong_type: { \
-return [ClojureLangRT boxWithLong:((unsigned long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case uchar_type: { \
-return [ClojureLangRT boxWithChar:((unsigned char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case ushort_type: { \
-return [ClojureLangRT boxWithShort:((unsigned short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case uint_type: { \
-return [ClojureLangRT boxWithInt:((unsigned int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
-} \
-case bool_type: { \
-return ((BOOL(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE]; \
-} \
-case id_type: { \
-return ((id(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
-} \
-case pointer_type: { \
-return [NSValue valueWithPointer:((void*(*)params)fun)(object, sel, ##__VA_ARGS__)];\
-} \
 }\
 
 + (id) invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
@@ -1249,20 +1249,19 @@ return [NSValue valueWithPointer:((void*(*)params)fun)(object, sel, ##__VA_ARGS_
     if (stret) {
         fun = objc_msgSend_stret;
     } else {
-#if TARGET_CPU_X86 || TARGET_CPU_X86_64
-        if (ret == float_type) {
+#if TARGET_CPU_X86
+        if (ret == float_type || ret == double_type || ret == longdouble_type) {
             fun = objc_msgSend_fpret;
         } else {
 #endif
             fun = objc_msgSend;
-#if TARGET_CPU_X86 || TARGET_CPU_X86_64
+#if TARGET_CPU_X86
         }
 #endif
-        
     }
 #else
     void *fun;
-    if (ret == float_type) {
+    if (ret == longdouble_type) {
         fun = objc_msgSend_fpret;
     } else {
         fun = objc_msgSend;
@@ -1280,7 +1279,7 @@ return [NSValue valueWithPointer:((void*(*)params)fun)(object, sel, ##__VA_ARGS_
                 id v = [arguments first];
                 switch (signatureToType([sig getArgumentTypeAtIndex:2])) {
                     case id_type: {
-                        dispatch_fast((id, SEL, id), [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v);
+                        dispatch_fast((id, SEL, id), (id)([v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v));
                     }
                     case int_type: {
                         dispatch_fast((id, SEL, int), [ClojureLangRT intCastWithId:v]);
@@ -1302,7 +1301,8 @@ return [NSValue valueWithPointer:((void*(*)params)fun)(object, sel, ##__VA_ARGS_
                     }
                     case float_type: {
                         float f = [ClojureLangRT floatCastWithId:v];
-                        dispatch_fast((id, SEL, float), *(int*)&f);
+                        // float required special handling
+                        dispatch_fast((id, SEL, int), *(int*)&f);
                     }
                     case uchar_type: {
                         dispatch_fast((id, SEL, unsigned char), (unsigned char)[ClojureLangRT charCastWithId:v]);
