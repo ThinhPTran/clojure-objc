@@ -15,6 +15,7 @@
 // short
 // int
 // double
+// long double
 // unsigned long long
 // unsigned long
 // unsigned char
@@ -55,6 +56,7 @@ static const char char_type = 'c';
 static const char short_type = 's';
 static const char int_type = 'i';
 static const char double_type = 'd';
+static const char longdouble_type = 'D';
 static const char ulonglong_type = 'Q';
 static const char ulong_type = 'L';
 static const char uchar_type = 'C';
