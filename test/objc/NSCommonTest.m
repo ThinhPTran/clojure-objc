@@ -117,15 +117,12 @@ id v = vv; \
 id r =[NSCommon invokeSel:[NSCommonTest class] withSelector:sel withArgs:[ClojureLangRT listWithId:v]];\
 if (![r isEqual:v]) {\
 NSLog(@"%@ FAILED. EXPECTED %@ GOT %@", sel, v, r);\
-} else { \
 } \
 }\
 
-//    NSLog(@"%@ PASSED", sel);\
-
 + (void) runtests {
     CFTimeInterval tt = CACurrentMediaTime();
-    for (int n = 0; n < 1000; n++) {
+    //for (int n = 0; n < 10000; n++) {
         check(@"floatm:", [ClojureLangRT boxWithFloat:12.2]);
         check(@"longm:", [ClojureLangRT boxWithLong:1223]);
         check(@"charm:", [ClojureLangRT boxWithChar:'s']);
@@ -150,7 +147,7 @@ NSLog(@"%@ FAILED. EXPECTED %@ GOT %@", sel, v, r);\
         check(@"idm:", @23);
         id c = @23;
         check(@"pointerm:", [NSValue valueWithPointer:&c]);
-    }
+    //}
     NSLog(@"%f", CACurrentMediaTime() - tt);
 }
 
