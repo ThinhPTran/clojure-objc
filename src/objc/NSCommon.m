@@ -1186,6 +1186,7 @@ return [NSValue valueWithUIOffset:((UIOffset(*)params)fun)(object, sel, ##__VA_A
 }\
 dispatch_fastf(params, ##__VA_ARGS__) \
 case void_type: { \
+objc_msgSend(object, sel, ##__VA_ARGS__); \
 return nil;\
 } \
 case longlong_type: { \
