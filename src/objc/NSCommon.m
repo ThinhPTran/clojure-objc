@@ -273,11 +273,10 @@ BOOL use_stret(char ret) {
         case cgaffinetransform_type:
         case catransform3d_type:
         case uioffset_type: {
-            int size = sizeof_type(ret);
 #if TARGET_IPHONE_SIMULATOR
-            return size > 8;
+            return sizeof_type(ret) > 8;
 #else
-            return size >= 8;
+            return sizeof_type(ret) >= 8;
 #endif
             break;
         }
@@ -302,63 +301,59 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
                 break;
             }
             case float_type: {
-                val = [[[JavaLangFloat alloc] initWithFloat:pval(float)] autorelease];
+                val = [ClojureLangRT boxWithFloat:pval(float)];
                 break;
             }
             case longlong_type: {
-                val = [[[JavaLangLong alloc] initWithLong:pval(long long)] autorelease];
+                val = [ClojureLangRT boxWithLong:pval(long long)];
                 break;
             }
             case long_type: {
-                val = [[[JavaLangLong alloc] initWithLong:pval(long)] autorelease];
+                val = [ClojureLangRT boxWithLong:pval(long)];
                 break;
             }
             case char_type: {
-                val = [[[JavaLangCharacter alloc] initWithChar:pval(char)] autorelease];
+                val = [ClojureLangRT boxWithChar:pval(char)];
                 break;
             }
             case short_type: {
-                val = [[[JavaLangShort alloc] initWithShort:pval(short)] autorelease];
+                val = [ClojureLangRT boxWithShort:pval(short)];
                 break;
             }
             case int_type: {
-                val = [[[JavaLangInteger alloc] initWithInt:pval(int)] autorelease];
+                val = [ClojureLangRT boxWithInt:pval(int)];
                 break;
             }
             case longdouble_type: {
-                val = [[[JavaLangDouble alloc] initWithDouble:pval(long double)] autorelease];
+                val = [ClojureLangRT boxWithDouble:pval(long double)];
                 break;
             }
             case double_type: {
-                val = [[[JavaLangDouble alloc] initWithDouble:pval(double)] autorelease];
+                val = [ClojureLangRT boxWithDouble:pval(double)];
                 break;
             }
             case ulong_type: {
-                val = [[[JavaLangLong alloc] initWithLong:pval(unsigned long)] autorelease];
+                val = [ClojureLangRT boxWithLong:pval(unsigned long)];
                 break;
             }
             case ulonglong_type: {
-                val = [[[JavaLangLong alloc] initWithLong:pval(unsigned long long)] autorelease];
+                val = [ClojureLangRT boxWithLong:pval(unsigned long long)];
                 break;
             }
             case uchar_type: {
-                val = [[[JavaLangCharacter alloc] initWithChar:pval(unsigned char)] autorelease];
+                val = [ClojureLangRT boxWithChar:pval(unsigned char)];
                 break;
             }
             case ushort_type: {
-                val = [[[JavaLangShort alloc] initWithShort:pval(unsigned short)] autorelease];
+                val = [ClojureLangRT boxWithShort:pval(unsigned short)];
                 break;
             }
             case uint_type: {
-                val = [[[JavaLangInteger alloc] initWithInt:pval(unsigned int)] autorelease];
+                val = [ClojureLangRT boxWithInt:pval(unsigned int)];
                 break;
             }
             case bool_type: {
-                if (pval(char) == YES) {
-                    val = [JavaLangBoolean getTRUE];
-                } else {
-                    val = [JavaLangBoolean getFALSE];
-                }
+                val = pval(char) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
                 break;
             }
             case id_type: {
@@ -560,89 +555,85 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
             case float_type: {
                 float v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangFloat alloc] initWithFloat:v] autorelease];
+                val = [ClojureLangRT boxWithFloat:v];
                 break;
             }
             case longlong_type: {
                 long long v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangLong alloc] initWithLong:v] autorelease];
+                val = [ClojureLangRT boxWithLong:v];
                 break;
             }
             case long_type: {
                 long v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangLong alloc] initWithLong:v] autorelease];
+                val = [ClojureLangRT boxWithLong:v];
                 break;
             }
             case char_type: {
                 char v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangCharacter alloc] initWithChar:v] autorelease];
+                val = [ClojureLangRT boxWithChar:v];
                 break;
             }
             case short_type: {
                 short v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangShort alloc] initWithShort:v] autorelease];
+                val = [ClojureLangRT boxWithShort:v];
                 break;
             }
             case int_type: {
                 int v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+                val = [ClojureLangRT boxWithInt:v];
                 break;
             }
             case longdouble_type: {
                 long double v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+                val = [ClojureLangRT boxWithDouble:v];
                 break;
             }
             case double_type: {
                 double v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+                val = [ClojureLangRT boxWithDouble:v];
                 break;
             }
             case ulong_type: {
                 unsigned long v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangLong alloc] initWithLong:v] autorelease];
+                val = [ClojureLangRT boxWithLong:v];
                 break;
             }
             case ulonglong_type: {
                 unsigned long long v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangLong alloc] initWithLong:v] autorelease];
+                val = [ClojureLangRT boxWithLong:v];
                 break;
             }
             case uchar_type: {
                 unsigned char v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangCharacter alloc] initWithChar:v] autorelease];
+                val = [ClojureLangRT boxWithChar:v];
                 break;
             }
             case ushort_type: {
                 unsigned short v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangShort alloc] initWithShort:v] autorelease];
+                val = [ClojureLangRT boxWithShort:v];
                 break;
             }
             case uint_type: {
                 unsigned int v;
                 [invocation getArgument:&v atIndex: j];
-                val = [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+                val = [ClojureLangRT boxWithInt:v];
                 break;
             }
             case bool_type: {
                 char v;
                 [invocation getArgument:&v atIndex: j];
-                if (v == YES) {
-                    val = [JavaLangBoolean getTRUE];
-                } else {
-                    val = [JavaLangBoolean getFALSE];
-                }
+                val = v == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
                 break;
             }
             case id_type: {
@@ -856,16 +847,13 @@ id boxValue(void* val, char type) {
             return [NSNull null];
         }
         case float_type: {
-            float v = *(float*)val;
-            return [[[JavaLangFloat alloc] initWithFloat:v] autorelease];
+            return [ClojureLangRT boxWithFloat:*(float*)val];
         }
         case long_type: {
-            long v = (long)*(long*)val;
-            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+            return [ClojureLangRT boxWithLong:(long)*(long*)val];
         }
         case longlong_type: {
-            long long v = *(long long*)val;
-            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+            return [ClojureLangRT boxWithLong:*(long long*)val];
         }
         case char_type: {
             if (*(char*)val == YES) {
@@ -873,94 +861,65 @@ id boxValue(void* val, char type) {
             } else if (*(char*)val == NO) {
                 return [JavaLangBoolean getFALSE];
             } else {
-                return [[[JavaLangCharacter alloc] initWithChar:*(char*)val] autorelease];
+                return [ClojureLangRT boxWithChar:*(char*)val];
             }
         }
         case short_type: {
-            short v = *(short*)val;
-            return [[[JavaLangShort alloc] initWithShort:v] autorelease];
-            break;
+            return [ClojureLangRT boxWithShort:*(short*)val];
         }
         case int_type: {
-            int v = *(int*)val;
-            return [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+            return [ClojureLangRT boxWithInt:*(int*)val];
         }
         case double_type: {
-#if TARGET_CPU_ARM
-            double v;
-            memcpy(val, &v, sizeof(double));
-#else
-            double v = *(double*)val;
-#endif
-            return [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+            return [ClojureLangRT boxWithDouble:*(double*)val];
         }
         case longdouble_type: {
-#if TARGET_CPU_ARM
-            long double v;
-            memcpy(val, &v, sizeof(long double));
-#else
-            long double v = *(long double*)val;
-#endif
-            return [[[JavaLangDouble alloc] initWithDouble:v] autorelease];
+            return [ClojureLangRT boxWithDouble:*(long double*)val];
         }
         case ulong_type: {
-            unsigned long v = (unsigned long)*(unsigned long*)val;
-            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+            return [ClojureLangRT boxWithLong:(unsigned long)*(unsigned long*)val];
         }
         case ulonglong_type: {
-            unsigned long long v = (unsigned long long)*(unsigned long long*)val;
-            return [[[JavaLangLong alloc] initWithLong:v] autorelease];
+            return [ClojureLangRT boxWithLong:(unsigned long long)*(unsigned long long*)val];
         }
         case uchar_type: {
-            unsigned char v = *(unsigned char*)val;
-            return [[[JavaLangCharacter alloc] initWithChar:v] autorelease];
+            return [ClojureLangRT boxWithChar:*(unsigned char*)val];
         }
         case ushort_type: {
-            unsigned short v = *(unsigned short*)val;
-            return [[[JavaLangShort alloc] initWithShort:v] autorelease];
+            return [ClojureLangRT boxWithShort:*(unsigned short*)val];
         }
         case uint_type: {
-            unsigned int v = *(unsigned int*)val;
-            return [[[JavaLangInteger alloc] initWithInt:v] autorelease];
+            return [ClojureLangRT boxWithInt:*(unsigned int*)val];
         }
         case bool_type: {
             return *(char*)val == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
         }
         case cgpoint_type: {
-            CGPoint v = *(CGPoint*)val;
-            return [NSValue valueWithCGPoint:v];
+            return [NSValue valueWithCGPoint:*(CGPoint*)val];
         }
         case nsrange_type: {
-            NSRange v = *(NSRange*)val;
-            return [NSValue valueWithRange:v];
+            return [NSValue valueWithRange:*(NSRange*)val];
         }
         case uiedge_type: {
-            UIEdgeInsets v = *(UIEdgeInsets*)val;
-            return [NSValue valueWithUIEdgeInsets:v];
+            return [NSValue valueWithUIEdgeInsets:*(UIEdgeInsets*)val];
         }
         case cgsize_type: {
-            CGSize v = *(CGSize*)val;
-            return [NSValue valueWithCGSize:v];
+            return [NSValue valueWithCGSize:*(CGSize*)val];
         }
         case cgaffinetransform_type: {
-            CGAffineTransform v = *(CGAffineTransform*)val;
-            return [NSValue valueWithCGAffineTransform:v];
+            return [NSValue valueWithCGAffineTransform:*(CGAffineTransform*)val];
         }
         case catransform3d_type: {
-            CATransform3D v = *(CATransform3D*)val;
-            return [NSValue valueWithCATransform3D:v];
+            return [NSValue valueWithCATransform3D:*(CATransform3D*)val];
         }
         case uioffset_type: {
-            UIOffset v = *(UIOffset*)val;
-            return [NSValue valueWithUIOffset:v];
+            return [NSValue valueWithUIOffset:*(UIOffset*)val];
         }
         case cgrect_type: {
-            CGRect v = *(CGRect*)val;
-            return [NSValue valueWithCGRect:v];
+            return [NSValue valueWithCGRect:*(CGRect*)val];
         }
         case pointer_type: {
-            void * v = *(void**)val;
-            return [NSValue valueWithPointer:v];
+            return [NSValue valueWithPointer:val];
         }
         default: {
             return *(void**)val;
@@ -1161,7 +1120,7 @@ const char* makeSignature(id types) {
 }
 
 #if TARGET_CPU_X86
-#define structmsgf(params, ...) \
+#define dispatch_fastf(params, ...) \
 case float_type: { \
 float r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
 return [[[JavaLangFloat alloc] initWithFloat:r] autorelease]; \
@@ -1175,16 +1134,31 @@ long double r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
 return [[[JavaLangDouble alloc] initWithDouble:r] autorelease]; \
 }
 #elif TARGET_CPU_X86_64
-#define structmsgf(params, ...) \
+#define dispatch_fastf(params, ...) \
+case float_type: { \
+return [ClojureLangRT boxWithFloat:((float(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+}\
+case double_type: { \
+return [ClojureLangRT boxWithDouble:((double(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+}\
 case longdouble_type: { \
-long double r = objc_msgSend_fpret(object, sel, ##__VA_ARGS__); \
-return [[[JavaLangDouble alloc] initWithDouble:r] autorelease]; \
+return [ClojureLangRT boxWithDouble:((long double(*)params)objc_msgSend_fpret)(object, sel, ##__VA_ARGS__)]; \
 }
 #else
-#define structmsgf(params, ...)
+#define dispatch_fastf(params, ...) \
+case float_type: { \
+void* val = objc_msgSend(object, sel, ##__VA_ARGS__); \
+return [ClojureLangRT boxWithFloat:*(float*)&val]; \
+}\
+case double_type: { \
+return [ClojureLangRT boxWithDouble:((double(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+}\
+case longdouble_type: { \
+return [ClojureLangRT boxWithDouble:((long double(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+}
 #endif
 
-#define structmsg(params, ...) \
+#define dispatch_fast(params, ...) \
 switch (ret) { \
 case cgrect_type: { \
 return [NSValue valueWithCGRect:((CGRect(*)params)fun)(object, sel, ##__VA_ARGS__)];\
@@ -1210,10 +1184,49 @@ return [NSValue valueWithCATransform3D:((CATransform3D(*)params)fun)(object, sel
 case uioffset_type: {\
 return [NSValue valueWithUIOffset:((UIOffset(*)params)fun)(object, sel, ##__VA_ARGS__)];\
 }\
-structmsgf(params, ##__VA_ARGS__) \
-default: { \
-void *r = objc_msgSend(object, sel, ##__VA_ARGS__); \
-return boxValue(&r, ret); \
+dispatch_fastf(params, ##__VA_ARGS__) \
+case void_type: { \
+return nil;\
+} \
+case longlong_type: { \
+return [ClojureLangRT boxWithLong:((long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case long_type: { \
+return [ClojureLangRT boxWithLong:((long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case char_type: { \
+char charv = ((char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
+return charv == YES ? [JavaLangBoolean getTRUE] : (charv == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:charv]); \
+} \
+case short_type: { \
+return [ClojureLangRT boxWithShort:((short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case int_type: { \
+return [ClojureLangRT boxWithInt:((int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ulong_type: { \
+return [ClojureLangRT boxWithLong:((unsigned long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ulonglong_type: { \
+return [ClojureLangRT boxWithLong:((unsigned long long(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case uchar_type: { \
+return [ClojureLangRT boxWithChar:((unsigned char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case ushort_type: { \
+return [ClojureLangRT boxWithShort:((unsigned short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case uint_type: { \
+return [ClojureLangRT boxWithInt:((unsigned int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
+} \
+case bool_type: { \
+return ((BOOL(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE]; \
+} \
+case id_type: { \
+return ((id(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
+} \
+case pointer_type: { \
+return [NSValue valueWithPointer:((void*(*)params)fun)(object, sel, ##__VA_ARGS__)];\
 } \
 }\
 
@@ -1254,11 +1267,11 @@ return boxValue(&r, ret); \
         fun = objc_msgSend;
     }
 #endif
-    // TODO: ulonglong return fails with structmsg
+    // TODO: ulonglong return fails with dispatch_fast
     if (ret != ulonglong_type) {
         switch ([arguments count]) {
             case 0: {
-                structmsg((id, SEL));
+                dispatch_fast((id, SEL));
                 break;
             }
                 
@@ -1266,78 +1279,78 @@ return boxValue(&r, ret); \
                 id v = [arguments first];
                 switch (signatureToType([sig getArgumentTypeAtIndex:2])) {
                     case id_type: {
-                        structmsg((id, SEL, id), [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v);
+                        dispatch_fast((id, SEL, id), [v isKindOfClass:[WeakRef class]] ? [(WeakRef*)v deref] : v);
                     }
                     case int_type: {
-                        structmsg((id, SEL, int), [ClojureLangRT intCastWithId:v]);
+                        dispatch_fast((id, SEL, int), [ClojureLangRT intCastWithId:v]);
                     }
                     case uint_type: {
-                        structmsg((id, SEL, unsigned int), [ClojureLangRT intCastWithId:v]);
+                        dispatch_fast((id, SEL, unsigned int), [ClojureLangRT intCastWithId:v]);
                     }
                     case ulonglong_type: {
-                        structmsg((id, SEL, unsigned long long), (unsigned long long)[ClojureLangRT longCastWithId:v]);
+                        dispatch_fast((id, SEL, unsigned long long), (unsigned long long)[ClojureLangRT longCastWithId:v]);
                     }
                     case ulong_type: {
-                        structmsg((id, SEL, unsigned long), (unsigned long)[ClojureLangRT longCastWithId:v]);
+                        dispatch_fast((id, SEL, unsigned long), (unsigned long)[ClojureLangRT longCastWithId:v]);
                     }
                     case long_type: {
-                        structmsg((id, SEL, long), (long)[ClojureLangRT longCastWithId:v]);
+                        dispatch_fast((id, SEL, long), (long)[ClojureLangRT longCastWithId:v]);
                     }
                     case longlong_type: {
-                        structmsg((id, SEL, long long), (long long)[ClojureLangRT longCastWithId:v]);
+                        dispatch_fast((id, SEL, long long), (long long)[ClojureLangRT longCastWithId:v]);
                     }
                     case float_type: {
                         float f = [ClojureLangRT floatCastWithId:v];
-                        structmsg((id, SEL, float), *(int*)&f);
+                        dispatch_fast((id, SEL, float), *(int*)&f);
                     }
                     case uchar_type: {
-                        structmsg((id, SEL, unsigned char), (unsigned char)[ClojureLangRT charCastWithId:v]);
+                        dispatch_fast((id, SEL, unsigned char), (unsigned char)[ClojureLangRT charCastWithId:v]);
                     }
                     case char_type: {
-                        structmsg((id, SEL, char), v == [JavaLangBoolean getTRUE] ? YES :
+                        dispatch_fast((id, SEL, char), v == [JavaLangBoolean getTRUE] ? YES :
                                   (v == [JavaLangBoolean getFALSE] ? NO : [ClojureLangRT charCastWithId:v]));
                     }
                     case ushort_type: {
-                        structmsg((id, SEL, unsigned short), (unsigned short)[ClojureLangRT shortCastWithId:v]);
+                        dispatch_fast((id, SEL, unsigned short), (unsigned short)[ClojureLangRT shortCastWithId:v]);
                     }
                     case short_type: {
-                        structmsg((id, SEL, short), [ClojureLangRT shortCastWithId:v]);
+                        dispatch_fast((id, SEL, short), [ClojureLangRT shortCastWithId:v]);
                     }
                     case double_type: {
-                        structmsg((id, SEL, double), [ClojureLangRT doubleCastWithId:v]);
+                        dispatch_fast((id, SEL, double), [ClojureLangRT doubleCastWithId:v]);
                     }
                     case longdouble_type: {
-                        structmsg((id, SEL, long double), (long double)[ClojureLangRT doubleCastWithId:v]);
+                        dispatch_fast((id, SEL, long double), (long double)[ClojureLangRT doubleCastWithId:v]);
                     }
                     case bool_type: {
-                        structmsg((id, SEL, bool), [ClojureLangRT booleanCastWithId:v]);
+                        dispatch_fast((id, SEL, bool), [ClojureLangRT booleanCastWithId:v]);
                     }
                     case pointer_type: {
-                        structmsg((id, SEL, void*), [v isKindOfClass:[ClojureLangSelector class]] ? NSSelectorFromString  ([(ClojureLangSelector*)v getName]) : [(NSValue*)v pointerValue]);
+                        dispatch_fast((id, SEL, void*), [v isKindOfClass:[ClojureLangSelector class]] ? NSSelectorFromString  ([(ClojureLangSelector*)v getName]) : [(NSValue*)v pointerValue]);
                     }
                     case cgpoint_type: {
-                        structmsg((id, SEL, CGPoint), [(NSValue*)v CGPointValue]);
+                        dispatch_fast((id, SEL, CGPoint), [(NSValue*)v CGPointValue]);
                     }
                     case nsrange_type: {
-                        structmsg((id, SEL, NSRange), [(NSValue*)v rangeValue]);
+                        dispatch_fast((id, SEL, NSRange), [(NSValue*)v rangeValue]);
                     }
                     case uiedge_type: {
-                        structmsg((id, SEL, UIEdgeInsets), [(NSValue*)v UIEdgeInsetsValue]);
+                        dispatch_fast((id, SEL, UIEdgeInsets), [(NSValue*)v UIEdgeInsetsValue]);
                     }
                     case cgsize_type: {
-                        structmsg((id, SEL, CGSize), [(NSValue*)v CGSizeValue]);
+                        dispatch_fast((id, SEL, CGSize), [(NSValue*)v CGSizeValue]);
                     }
                     case cgaffinetransform_type: {
-                        structmsg((id, SEL, CGAffineTransform), [(NSValue*)v CGAffineTransformValue]);
+                        dispatch_fast((id, SEL, CGAffineTransform), [(NSValue*)v CGAffineTransformValue]);
                     }
                     case catransform3d_type: {
-                        structmsg((id, SEL, CATransform3D), [(NSValue*)v CATransform3DValue]);
+                        dispatch_fast((id, SEL, CATransform3D), [(NSValue*)v CATransform3DValue]);
                     }
                     case uioffset_type: {
-                        structmsg((id, SEL, UIOffset), [(NSValue*)v UIOffsetValue]);
+                        dispatch_fast((id, SEL, UIOffset), [(NSValue*)v UIOffsetValue]);
                     }
                     case cgrect_type: {
-                        structmsg((id, SEL, CGRect), [(NSValue*)v CGRectValue]);
+                        dispatch_fast((id, SEL, CGRect), [(NSValue*)v CGRectValue]);
                     }
                 }
                 break;

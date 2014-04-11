@@ -6,7 +6,7 @@
 (def iphone-os-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.1.sdk")
 (def iphone-simulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.1.sdk")
 (def frameworks "-framework UIKit -framework Foundation")
-(def opts "-miphoneos-version-min=5.0 -fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -O3 -DDEBUG=1 -fstrict-aliasing -Wno-unsequenced -MT dependencies")
+(def opts "-g -miphoneos-version-min=6.1 -fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -Ofast -DDEBUG=1 -Wno-unsequenced")
 
 (let [a (agent nil)]
   (defn println+ [& other]
