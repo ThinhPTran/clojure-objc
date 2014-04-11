@@ -39,4 +39,8 @@
     return NO;
 }
 
+-(NSString *)description {
+    return [[val nonretainedObjectValue] description];
+}
+
 @end

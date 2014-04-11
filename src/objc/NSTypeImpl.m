@@ -19,7 +19,9 @@
 #define va_arg_p(type)\
     {\
     type v = va_arg(ap, type); \
-    args[n] = &v; \
+    type* vp = malloc(sizeof(type)); \
+    memcpy(vp, &v, sizeof(type)); \
+    args[n] = vp; \
     break;\
     }\
 

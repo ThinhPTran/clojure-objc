@@ -313,7 +313,8 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
                 break;
             }
             case char_type: {
-                val = [ClojureLangRT boxWithChar:pval(char)];
+                char c = pval(char);
+                val = c == YES ? [JavaLangBoolean getTRUE] : (c == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:pval(char)]);
                 break;
             }
             case short_type: {
@@ -401,6 +402,7 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
                                                             [typesa nthWithInt:n]] userInfo:nil];
         }
         args = [fconj invokeWithId:args withId:val];
+        free(argsp[j]);
     }
     
     id v = [fn applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
