@@ -1,5 +1,9 @@
 package clojure.lang;
 
+/*-[
+#include "clojure/core_gensym.h"
+]-*/
+
 public class RemoteRef extends RestFn {
 
   private static final String OBJC_REF = "objc-ref-";
@@ -20,8 +24,9 @@ public class RemoteRef extends RestFn {
     IPersistentMap lookup = (IPersistentMap) i.deref();
     Object curr = lookup.valAt(o);
     if (curr == null) {
-      final String id = ((Symbol) ((AFn) gensym.getRawRoot())
-          .invoke(ObjC.objc ? OBJC_REF : JVM_REF)).getName();
+      Object invoke = ObjC.objc ? nativeGensym(OBJC_REF) : ((AFn) gensym.getRawRoot())
+          .invoke(JVM_REF);
+      final String id = ((Symbol) invoke).getName();
       a.swap(new AFn() {
         @Override
         public Object invoke(Object old) {
@@ -39,6 +44,10 @@ public class RemoteRef extends RestFn {
       return curr;
     }
   }
+
+  private native static Object nativeGensym(String objcRef) /*-[
+    return null;
+  ]-*/;
 
   private String id;
 

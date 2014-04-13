@@ -19,7 +19,7 @@
 -(id)initWith:(id)o {
     self = [super init];
     if (self) {
-        val = [NSValue valueWithNonretainedObject:o];
+        val = [[NSValue valueWithNonretainedObject:o] retain];
     }
     return self;
 }
@@ -41,6 +41,11 @@
 
 -(NSString *)description {
     return [[val nonretainedObjectValue] description];
+}
+
+-(void)dealloc {
+    [val release];
+    [super dealloc];
 }
 
 @end

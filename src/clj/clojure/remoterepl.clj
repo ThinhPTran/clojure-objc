@@ -5,94 +5,61 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
-(def work (atom []))
+(def pending (atom nil))
 
 (def repl (atom nil))
 
 (def responses (atom {}))
 
-(defn safe-apply [f args]
-  (if objc?
-    (clojure.lang.RemoteRepl/safetry (fn [] (apply f args)))
-    (try (apply f args) (catch Exception e (.printStackTrace e)))))
-
 (defn process-msg [f]
-  (if (= 2 (count f))
-    (let [[id r] f]
-      (swap! responses assoc id r))
-    (let [[id f args] f
-          r (safe-apply f args)]
-      (if objc?
-        ($ @repl :println (pr-str [id r]))
-        (.println @repl (pr-str [id r]))))))
-
-(defn do-work []
-  (let [w @work]
-    (reset! work [])
-    (doall (map process-msg w))))
+  (println "PROCESS MSG" f)
+  (let [[id f args] f]
+    (.println @repl
+              (pr-str [id (try (apply f args)
+                               (catch Exception e
+                                 (.printStackTrace e)))]))))
 
 (def in-call-remote (atom 0))
-
-(add-watch work :worker
-           (fn [k r o n]
-             (when (and (zero? @in-call-remote) (not (empty? n)))
-               (if objc?
-                 (dispatch-main (do-work))
-                 (future (do-work))))))
 
 (defn call-remote [sel args]
   (swap! in-call-remote inc)
   (let [args (vec args)
-        id (keyword (uuid))
-        msg (pr-str [id sel args])]
-    (if objc?
-      ($ @repl :println msg)
-      (.println @repl msg))
+        id (keyword (uuid))]
+    (.println @repl (pr-str [id sel args]))
     (loop []
       (if (some #{id} (keys @responses))
         (let [r (id @responses)]
           (swap! responses dissoc id)
           (swap! in-call-remote dec)
+          (println "CALL REMOTE" sel r)
           r)
         (do
           (Thread/sleep 10)
-          (do-work)
+          (when-let [w @pending]
+            (reset! pending nil)
+            (process-msg w))
           (recur))))))
 
-(defn listen-objc [host port]
-  (let [s ($ ($ ($ NSSocketImpl) :alloc)
-             :initWithHost host
-             :withPort (str port))]
-    (clojure.lang.RemoteRepl/setConnected true)
-    (println "Remote repl connected to" host ":" port)
-    (reset! repl s)
-    (loop [f ($ s :read)]
-      (swap! work conj (read-string f))
-      (recur ($ s :read)))))
-
-(defn listen-jvm [port]
-  (let [server (ServerSocket. port)]
-    (println "Remote repl listening on port" port)
-    (loop []
-      (let [s (.accept server)
-            out (PrintWriter. (.getOutputStream s) true)
-            in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
-        (future
+(defn listen [port]
+  (future
+    (let [server (ServerSocket. port)]
+      (println "Remote repl listening on port" port)
+      (loop []
+        (let [s (.accept server)
+              out (PrintWriter. (.getOutputStream s) true)
+              in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
           (clojure.lang.RemoteRepl/setConnected true)
           (println "Client has connected!")
           (try
             (reset! repl out)
             (loop [f (read in)]
-              (swap! work conj f)
+              (if (= 2 (count f))
+                (let [[id r] f]
+                  (swap! responses assoc id r))
+                (if (zero? @in-call-remote)
+                  (process-msg f)
+                  (reset! pending f)))
               (recur (read in)))
             (catch Exception e
-              (.printStackTrace e)))))
-      (recur))))
-
-(defn listen
-  ([port] (listen nil port))
-  ([host port]
-      (future
-        (if objc?
-          (listen-objc host port)
-          (listen-jvm port)))))
+              (.printStackTrace e))))
+        (recur)))))
