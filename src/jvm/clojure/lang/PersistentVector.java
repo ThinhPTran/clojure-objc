@@ -49,7 +49,7 @@ public final static PersistentVector EMPTY = new PersistentVector(0, 5, EMPTY_NO
 static public PersistentVector create(ISeq items){
 	TransientVector ret = EMPTY.asTransient();
 	for(; items != null; items = items.next())
-		ret = ret.conj(items.first());
+		ret = ret.uncheckedConj(items.first());
 	return ret.persistent();
 }
 
@@ -493,7 +493,11 @@ static final class TransientVector extends AFn implements ITransientVector, Coun
 
 	public TransientVector conj(Object val){
 		ensureEditable();
-		int i = cnt;
+		return uncheckedConj(val);
+	}
+
+  protected TransientVector uncheckedConj(Object val) {
+    int i = cnt;
 		//room in tail?
 		if(i - tailoff() < 32)
 			{
@@ -521,7 +525,7 @@ static final class TransientVector extends AFn implements ITransientVector, Coun
 		shift = newshift;
 		++cnt;
 		return this;
-	}
+  }
 
 	private Node pushTail(int level, Node parent, Node tailnode){
 		//if parent is leaf, insert node,
