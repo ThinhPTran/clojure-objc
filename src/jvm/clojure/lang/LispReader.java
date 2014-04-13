@@ -339,6 +339,12 @@ private static Object matchSymbol(String s){
 
 
 private static Object matchNumber(String s){
+  if (ObjC.objc) {
+    Object r = nativeMatchNumber(s);
+    if (r != null) {
+      return r;
+    }
+  }
 	Matcher m = intPat.matcher(s);
 	if(m.matches())
 		{
@@ -388,6 +394,17 @@ private static Object matchNumber(String s){
 		}
 	return null;
 }
+
+private native static Object nativeMatchNumber(String s) /*-[
+  long long v;
+  double d;
+  NSScanner *scanner = [NSScanner scannerWithString:s];
+  if ([scanner scanLongLong:&v]) {
+    return [ClojureLangRT boxWithLong:v];
+  } else if ([scanner scanDouble:&d]) {
+    return [ClojureLangRT boxWithDouble:d];
+  }
+]-*/;
 
 static private IFn getMacro(int ch){
 	if(ch < macros.length)
