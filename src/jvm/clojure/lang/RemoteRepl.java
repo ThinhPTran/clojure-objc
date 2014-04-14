@@ -46,10 +46,6 @@ public class RemoteRepl {
   
   public native static void connect(String host, String port) /*-[
     [ReplClient connect:host port:port];
-  }
-  
-  private native static void listenNative(String host, int port) /*-[
-    [[Clojureremoterepl_listen VAR] invokeWithId:host withId:[JavaLangInteger valueOfWithInt:port]];
   ]-*/;
 
   public static native Object safetry(AFn fn) /*-[

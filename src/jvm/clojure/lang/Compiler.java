@@ -14,9 +14,11 @@ package clojure.lang;
 
 //*
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -7975,19 +7977,38 @@ public class Compiler implements Opcodes {
     }
   }
 
+  private static String readFileAsString(String filePath) throws IOException {
+    StringBuffer fileData = new StringBuffer();
+    BufferedReader reader = new BufferedReader(
+            new FileReader(filePath));
+    char[] buf = new char[1024];
+    int numRead=0;
+    while((numRead=reader.read(buf)) != -1){
+        String readData = String.valueOf(buf, 0, numRead);
+        fileData.append(readData);
+    }
+    reader.close();
+    return fileData.toString();
+  }
+  
   static public void writeSourceFile(String internalName, String source)
       throws IOException {
     internalName = internalName.replaceAll("-", "_");
     String genPath = (String) Compiler.SOURCE_GEN_PATH.deref();
     if (genPath == null) {
       genPath = "target/gen";
-      // throw Util.runtimeException("*source-path* not set");
     }
     String[] dirs = internalName.split("/");
     String path = genPath + File.separator + internalName + ".java";
     File cf = new File(path);
     cf.getParentFile().mkdirs();
-    cf.createNewFile();
+    if (!cf.exists()) {
+      cf.createNewFile();
+    } else {
+      if (readFileAsString(path).equals(source)) {
+        return;
+      }
+    }
     FileOutputStream cfs = new FileOutputStream(cf);
     try {
       cfs.write(source.getBytes());

@@ -46,7 +46,7 @@ public class RemoteRef extends RestFn {
   }
 
   private native static Object nativeGensym(String objcRef) /*-[
-    return null;
+    return [[Clojurecore_gensym VAR] invokeWith:objcRef];
   ]-*/;
 
   private String id;
