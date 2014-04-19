@@ -1904,10 +1904,10 @@ public class Compiler implements Opcodes {
         String op = (String) RT.get(SourceGenIntrinsics.preds,
             method.toString());
         if (argsList.size() == 1) {
-          return wrap(context, op + argsList.get(0));
+          return wrap(context, "(" + op + argsList.get(0) + ")");
         } else if (argsList.size() == 2) {
-          return wrap(context,
-              argsList.get(0) + " " + op + " " + argsList.get(1));
+          return wrap(context, "(" + argsList.get(0) + " " + op + " "
+              + argsList.get(1) + ")");
         }
         throw new RuntimeException("Error emiting intrinsics: " + op + " with "
             + argsList);
@@ -1942,10 +1942,10 @@ public class Compiler implements Opcodes {
           } else if (op.equals("alength[]")) {
             return wrap(context, argsList.get(0) + ".length");
           } else if (argsList.size() == 1) {
-            return wrap(context, op + argsList.get(0));
+            return wrap(context, "(" + op + argsList.get(0) + ")");
           } else if (argsList.size() == 2) {
-            return wrap(context,
-                argsList.get(0) + " " + op + " " + argsList.get(1));
+            return wrap(context, "(" + argsList.get(0) + " " + op + " "
+                + argsList.get(1) + ")");
           }
           throw new RuntimeException("Error emiting intrinsics");
 
@@ -4701,7 +4701,8 @@ public class Compiler implements Opcodes {
         clinitgen.invokeStatic(RT_TYPE,
             Method.getMethod("clojure.lang.Var var(String,String)"));
         clinitgen.putStatic(objtype, "VAR", VAR_TYPE);
-        emitSource("VAR = RT.var(\"" + var.ns.name.name + "\", \"" + var.sym.name + "\");");
+        emitSource("VAR = RT.var(\"" + var.ns.name.name + "\", \""
+            + var.sym.name + "\");");
       }
 
       if (constants.count() > 0) {
@@ -6039,7 +6040,7 @@ public class Compiler implements Opcodes {
           // todo don't hardwire this
           EXCEPTION_TYPES, cv);
       gen.visitCode();
-
+      
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < argLocals.count(); i++) {
         if (sb.length() > 0) {
@@ -6051,6 +6052,11 @@ public class Compiler implements Opcodes {
       emitSource("public final " + printClass(retClass) + " invokePrim("
           + sb.toString() + ") {");
       tab();
+      
+      if (hasException) {
+        emitSource("try {");
+        tab();
+      }
 
       Label loopLabel = gen.mark();
       gen.visitLineNumber(line, loopLabel);
@@ -6071,6 +6077,15 @@ public class Compiler implements Opcodes {
         }
       } finally {
         Var.popThreadBindings();
+      }
+      
+      if (hasException) {
+        untab();
+        emitSource("} catch (Exception ___e) {");
+        tab();
+        emitSource("throw Util.sneakyThrow(___e);");
+        untab();
+        emitSource("}");
       }
 
       untab();
@@ -7979,18 +7994,17 @@ public class Compiler implements Opcodes {
 
   private static String readFileAsString(String filePath) throws IOException {
     StringBuffer fileData = new StringBuffer();
-    BufferedReader reader = new BufferedReader(
-            new FileReader(filePath));
+    BufferedReader reader = new BufferedReader(new FileReader(filePath));
     char[] buf = new char[1024];
-    int numRead=0;
-    while((numRead=reader.read(buf)) != -1){
-        String readData = String.valueOf(buf, 0, numRead);
-        fileData.append(readData);
+    int numRead = 0;
+    while ((numRead = reader.read(buf)) != -1) {
+      String readData = String.valueOf(buf, 0, numRead);
+      fileData.append(readData);
     }
     reader.close();
     return fileData.toString();
   }
-  
+
   static public void writeSourceFile(String internalName, String source)
       throws IOException {
     internalName = internalName.replaceAll("-", "_");
@@ -8169,7 +8183,7 @@ public class Compiler implements Opcodes {
 
           for (int j = n * INITS_PER; j < constants.count()
               && j < (n + 1) * INITS_PER; j++) {
-            int i = (Integer)constants.nth(j);
+            int i = (Integer) constants.nth(j);
             String val = objx.emitValue(objx.constants.nth(i), clinitgen);
             clinitgen.checkCast(objx.constantType(i));
             clinitgen.putStatic(objx.objtype, objx.constantName(i),
