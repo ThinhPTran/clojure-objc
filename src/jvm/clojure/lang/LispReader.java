@@ -404,6 +404,7 @@ private native static Object nativeMatchNumber(String s) /*-[
   } else if ([scanner scanDouble:&d]) {
     return [ClojureLangRT boxWithDouble:d];
   }
+  return nil;
 ]-*/;
 
 static private IFn getMacro(int ch){

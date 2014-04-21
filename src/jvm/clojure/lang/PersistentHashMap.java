@@ -12,6 +12,7 @@ package clojure.lang;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -830,12 +831,22 @@ final static class HashCollisionNode implements INode{
 	int count;
 	Object[] array;
 	final AtomicReference<Thread> edit;
+	int[] keys;
 
 	HashCollisionNode(AtomicReference<Thread> edit, int hash, int count, Object... array){
 		this.edit = edit;
 		this.hash = hash;
 		this.count = count;
 		this.array = array;
+	}
+	
+	void ensureKeys() {
+	  if (keys == null || keys.length != array.length) {
+  	  keys = new int[array.length];
+      for(int i = 0; i < array.length; i+=2) {
+        keys[i] = Util.hash(array[i]);
+      }  
+	  }
 	}
 
 	public INode assoc(int shift, int hash, Object key, Object val, Box addedLeaf){
@@ -898,11 +909,13 @@ final static class HashCollisionNode implements INode{
 	}
 
 	public int findIndex(Object key){
-		for(int i = 0; i < 2*count; i+=2)
-			{
-			if(Util.equiv(key, array[i]))
-				return i;
-			}
+	  ensureKeys();
+	  int hash = Util.hash(key);
+    for(int i = 0; i < 2*count; i+=2)
+		  {
+      if(keys[i] == hash && Util.equiv(key, array[i]))
+        return i;
+		  }
 		return -1;
 	}
 
