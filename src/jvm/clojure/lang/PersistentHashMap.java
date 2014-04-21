@@ -12,7 +12,6 @@ package clojure.lang;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -841,7 +840,7 @@ final static class HashCollisionNode implements INode{
 	}
 	
 	void ensureKeys() {
-	  if (keys == null || keys.length != array.length) {
+	  if (keys == null) {
   	  keys = new int[array.length];
       for(int i = 0; i < array.length; i+=2) {
         keys[i] = Util.hash(array[i]);
@@ -931,6 +930,7 @@ final static class HashCollisionNode implements INode{
 		if(this.edit == edit) {
 			this.array = array;
 			this.count = count;
+			this.keys = null;
 			return this;
 		}
 		return new HashCollisionNode(edit, hash, count, array);
