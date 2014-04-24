@@ -1,10 +1,13 @@
 (in-ns 'clojure.core)
 
-(require '[clojure.walk :as walk])
+(require 'clojure.string)
 
 (def ^:dynamic dispatch-class)
 
 (def objc? (clojure.lang.ObjC/objc))
+
+(when-not objc?
+  (require '[clojure.walk :as walk]))
 
 (defmacro dispatch-main
   "Runs the body with dispatch_sync in the main queue

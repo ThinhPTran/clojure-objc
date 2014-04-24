@@ -56,7 +56,7 @@
         (sh+ "libtool" "-static" "-syslibroot" sdk "-filelist" 
              "files.LinkFileList" frameworks "-o" "libclojure-objc.a")))))
 
-(sh+ "mvn" "clean" "compile" "test-compile")
+(sh+ "mvn" "compile" "test-compile")
 (sh+ "rm" "-Rf" "target/objc")
 (sh+ "mkdir" "target/objc")
 (sh+ "cp" "-R" "src/objc/." "target/objc")

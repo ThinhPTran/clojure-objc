@@ -583,7 +583,7 @@ static int countFrom(Object o){
 		o = null;
 		int i = 0;
 		for(; s != null; s = s.next()) {
-			if(s instanceof Counted)
+			if(s.getClass() != Cons.class && s instanceof Counted)
 				return i + s.count();
 			i++;
 		}

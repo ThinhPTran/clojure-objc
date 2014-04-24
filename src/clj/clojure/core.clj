@@ -6392,9 +6392,9 @@
               coll)
       persistent!))
 
-(require '[clojure.java.io :as jio])
+#_(require '[clojure.java.io :as jio])
 
-(defn- normalize-slurp-opts
+#_(defn- normalize-slurp-opts
   [opts]
   (if (string? (first opts))
     (do
@@ -6402,7 +6402,7 @@
       [:encoding (first opts)])
     opts))
 
-(defn slurp
+#_(defn slurp
   "Opens a reader on f and reads all its contents, returning a string.
   See clojure.java.io/reader for a complete list of supported arguments."
   {:added "1.0"}
@@ -6417,7 +6417,7 @@
                (.append sb (char c))
                (recur (.read r)))))))))
 
-(defn spit
+#_(defn spit
   "Opposite of slurp.  Opens f with writer, writes content, then
   closes f. Options passed to clojure.java.io/writer."
   {:added "1.2"}
