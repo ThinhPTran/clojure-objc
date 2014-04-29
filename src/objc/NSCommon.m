@@ -187,7 +187,7 @@ int sizeof_type(char c) {
 }
 
 id signaturesToTypes(NSMethodSignature* sig, BOOL skip) {
-    id types = [ClojureLangPersistentVector EMPTY];
+    id types = ClojureLangPersistentVector_get_EMPTY_();
     types = [fconj invokeWithId:types withId:[[[JavaLangCharacter alloc] initWithChar:signatureToType([sig methodReturnType])] autorelease]];
     for (int n = 0; n < [sig numberOfArguments]; n++) {
         if (!skip || (n != 0 && n != 1)) {
@@ -288,7 +288,7 @@ BOOL use_stret(char ret) {
 (type)*((type*)argsp[j])\
 
 void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
-    id args = [ClojureLangPersistentVector EMPTY];
+    id args = ClojureLangPersistentVector_get_EMPTY_();
     args = [fconj invokeWithId:args withId:[WeakRef from:sself]];
     ClojureLangPersistentVector *typesa = [ClojureLangPersistentVector createWithClojureLangISeq:types];
     char retType = to_char([typesa nthWithInt:0]);
@@ -314,7 +314,7 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
             }
             case char_type: {
                 char c = pval(char);
-                val = c == YES ? [JavaLangBoolean getTRUE] : (c == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:pval(char)]);
+                val = c == YES ? JavaLangBoolean_get_TRUE__() : (c == NO ? JavaLangBoolean_get_FALSE__() : [ClojureLangRT boxWithChar:pval(char)]);
                 break;
             }
             case short_type: {
@@ -354,7 +354,7 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
                 break;
             }
             case bool_type: {
-                val = pval(char) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
+                val = pval(char) == YES ? JavaLangBoolean_get_TRUE__() : JavaLangBoolean_get_FALSE__();
                 break;
             }
             case id_type: {
@@ -542,7 +542,7 @@ void* callWithArgs(void **argsp, id sself, id types, ClojureLangAFn *fn) {
 }
 
 void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLangAFn *fn) {
-    id args = [ClojureLangPersistentVector EMPTY];
+    id args = ClojureLangPersistentVector_get_EMPTY_();
     args = [fconj invokeWithId:args withId:[WeakRef from:sself]];
     IOSObjectArray *typesa = [ClojureLangRT toArrayWithId:types];
     char retType = to_char([typesa objectAtIndex:0]);
@@ -635,7 +635,7 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
             case bool_type: {
                 char v;
                 [invocation getArgument:&v atIndex: j];
-                val = v == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
+                val = v == YES ? JavaLangBoolean_get_TRUE__() : JavaLangBoolean_get_FALSE__();
                 break;
             }
             case id_type: {
@@ -859,9 +859,9 @@ id boxValue(void* val, char type) {
         }
         case char_type: {
             if (*(char*)val == YES) {
-                return [JavaLangBoolean getTRUE];
+                return JavaLangBoolean_get_TRUE__();
             } else if (*(char*)val == NO) {
-                return [JavaLangBoolean getFALSE];
+                return JavaLangBoolean_get_FALSE__();
             } else {
                 return [ClojureLangRT boxWithChar:*(char*)val];
             }
@@ -894,7 +894,7 @@ id boxValue(void* val, char type) {
             return [ClojureLangRT boxWithInt:*(unsigned int*)val];
         }
         case bool_type: {
-            return *(char*)val == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE];
+            return *(char*)val == YES ? JavaLangBoolean_get_TRUE__() : JavaLangBoolean_get_FALSE__();
         }
         case cgpoint_type: {
             return [NSValue valueWithCGPoint:*(CGPoint*)val];
@@ -1170,7 +1170,7 @@ case int_type: { \
 return [ClojureLangRT boxWithInt:((int(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
 } \
 case bool_type: { \
-return ((BOOL(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__) == YES ? [JavaLangBoolean getTRUE] : [JavaLangBoolean getFALSE]; \
+return ((BOOL(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__) == YES ? JavaLangBoolean_get_TRUE__() : JavaLangBoolean_get_FALSE__(); \
 } \
 case id_type: { \
 return ((id(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
@@ -1186,7 +1186,7 @@ return [ClojureLangRT boxWithLong:((long(*)params)objc_msgSend)(object, sel, ##_
 } \
 case char_type: { \
 char charv = ((char(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__); \
-return charv == YES ? [JavaLangBoolean getTRUE] : (charv == NO ? [JavaLangBoolean getFALSE] : [ClojureLangRT boxWithChar:charv]); \
+return charv == YES ? JavaLangBoolean_get_TRUE__() : (charv == NO ? JavaLangBoolean_get_FALSE__() : [ClojureLangRT boxWithChar:charv]); \
 } \
 case short_type: { \
 return [ClojureLangRT boxWithShort:((short(*)params)objc_msgSend)(object, sel, ##__VA_ARGS__)]; \
@@ -1310,8 +1310,8 @@ dispatch_fastf(params, ##__VA_ARGS__) \
                         dispatch_fast((id, SEL, unsigned char), (unsigned char)[ClojureLangRT charCastWithId:v]);
                     }
                     case char_type: {
-                        dispatch_fast((id, SEL, char), v == [JavaLangBoolean getTRUE] ? YES :
-                                  (v == [JavaLangBoolean getFALSE] ? NO : [ClojureLangRT charCastWithId:v]));
+                        dispatch_fast((id, SEL, char), v == JavaLangBoolean_get_TRUE__() ? YES :
+                                  (v == JavaLangBoolean_get_FALSE__() ? NO : [ClojureLangRT charCastWithId:v]));
                     }
                     case ushort_type: {
                         dispatch_fast((id, SEL, unsigned short), (unsigned short)[ClojureLangRT shortCastWithId:v]);

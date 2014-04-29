@@ -39,10 +39,10 @@ public class MultiFn extends AFn {
   static final Var parents = RT.var("clojure.core", "parents");
 
   static native void loadFns() /*-[
-    [Clojurecore_assoc VAR];
-    [Clojurecore_dissoc VAR];
-    [Clojurecore_isa_QMARK_ VAR];
-    [Clojurecore_parents VAR];
+    Clojurecore_assoc_get_VAR_();
+    Clojurecore_dissoc_get_VAR_();
+    Clojurecore_isa_QMARK__get_VAR_();
+    Clojurecore_parents_get_VAR_();
   ]-*/;
   
   static {

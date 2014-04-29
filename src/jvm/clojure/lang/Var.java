@@ -180,23 +180,24 @@ private static String buildClassName(String ns, String sym) {
 
 public void maybeLoad() {
   if (ObjC.objc) {
-    loadFromClass(buildClassName(ns.toString(), sym.toString()));
+    throw new RuntimeException("Dynamic loading not available on objc");
+    //loadFromClass(buildClassName(ns.toString(), sym.toString()));
   } else {
     maybeLoadFromClass(ns.toString(), sym.toString());
   }
 }
 
 
-private native void loadFromClass(String clazz) /*-[
-  IOSObjectArray *parts = [clazz split:@"\\."];
-  NSString *classname = @"";
-  for (int n = 0; n < parts.count - 1; n++) {
-    NSString *s = (NSString*)[parts objectAtIndex:n];
-    classname = [classname stringByAppendingString:[[[s substringToIndex:1] uppercaseString] stringByAppendingString:[s substringFromIndex:1]]];
-  }
-  classname = [classname stringByAppendingString:[parts objectAtIndex:parts.count-1]];
-  [NSClassFromString(classname) VAR];
-]-*/;
+//private native void loadFromClass(String clazz) /*-[
+//  IOSObjectArray *parts = [clazz split:@"\\."];
+//  NSString *classname = @"";
+//  for (int n = 0; n < parts.count - 1; n++) {
+//    NSString *s = (NSString*)[parts objectAtIndex:n];
+//    classname = [classname stringByAppendingString:[[[s substringToIndex:1] uppercaseString] stringByAppendingString:[s substringFromIndex:1]]];
+//  }
+//  classname = [classname stringByAppendingString:[parts objectAtIndex:parts.count-1]];
+//  [NSClassFromString(classname) VAR];
+//]-*/;
 
 public static Var create(){
 	return new Var(null, null);

@@ -415,7 +415,7 @@ public class RT {
   }
 
 private native static void loadFns() /*-[
-  [Clojurecore_ns VAR];
+  Clojurecore_ns_get_VAR_();
 ]-*/;
 
 static public void addURL(Object url) throws MalformedURLException{

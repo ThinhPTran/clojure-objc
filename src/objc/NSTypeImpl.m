@@ -225,7 +225,7 @@ IMP getDispatch(char c) {
 @implementation NSTypeImpl
 
 +(void)initialize {
-    dynamicClasses = [[ClojureLangAtom alloc] initWithId:[ClojureLangPersistentHashMap EMPTY]];
+    dynamicClasses = [[ClojureLangAtom alloc] initWithId:ClojureLangPersistentHashMap_get_EMPTY_()];
 }
 
 +(Class) makeClassWithName:(NSString*)name superclass:(NSString*)s map:(ClojureLangAPersistentMap*)m {

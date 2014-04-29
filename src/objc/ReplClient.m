@@ -30,7 +30,7 @@ static volatile id pendingcall = nil;
 @implementation ReplClient
 
 +(void)initialize {
-    responses = [[ClojureLangAtom alloc] initWithId:[ClojureLangPersistentHashMap EMPTY]];
+    responses = [[ClojureLangAtom alloc] initWithId:ClojureLangPersistentHashMap_get_EMPTY_()];
 }
 
 +(void) processCall2:(id)msg {
@@ -39,7 +39,7 @@ static volatile id pendingcall = nil;
         id s = [ClojureLangRT secondWithId:msg];
         id args = [ClojureLangRT thirdWithId:msg];
         id r = [(ClojureLangAFn*)s applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
-        [nssocket println:[[Clojurecore_pr_str VAR] invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:r]]];
+        [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:r]]];
     }
     @catch (NSException *exception) {
         NSLog(@"%@ %@", exception, [exception callStackSymbols]);
@@ -65,7 +65,7 @@ static volatile id pendingcall = nil;
             if ([ClojureLangRT countFromWithId:msg] == 2) {
                 id i = [ClojureLangRT firstWithId:msg];
                 id s = [ClojureLangRT secondWithId:msg];
-                [responses swapWithClojureLangIFn:[Clojurecore_assoc VAR] withId:i withId:s];
+                [responses swapWithClojureLangIFn:Clojurecore_assoc_get_VAR_() withId:i withId:s];
             } else {
                 if (callremotes == 0) {
                     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -81,13 +81,13 @@ static volatile id pendingcall = nil;
 
 +(id) callRemote:(id)sel args:(id)args {
     callremotes++;
-    args = [[Clojurecore_vec VAR] invokeWithId:args];
+    args = [Clojurecore_vec_get_VAR_() invokeWithId:args];
     id i = [[JavaUtilUUID randomUUID] description];
-    [nssocket println:[[Clojurecore_pr_str VAR] invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:sel withId:args]]];
+    [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:sel withId:args]]];
     while (true) {
         if ([ClojureLangRT containsWithId:[responses deref] withId:i]) {
             id v = [ClojureLangRT getWithId:[responses deref] withId:i];
-            [responses swapWithClojureLangIFn:[Clojurecore_dissoc VAR] withId:i];
+            [responses swapWithClojureLangIFn:Clojurecore_dissoc_get_VAR_() withId:i];
             callremotes--;
             return v;
         } else {
