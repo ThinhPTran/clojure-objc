@@ -397,11 +397,14 @@ private static Object matchNumber(String s){
 
 private native static Object nativeMatchNumber(String s) /*-[
   long long v;
-  double d;
   NSScanner *scanner = [NSScanner scannerWithString:s];
-  if ([scanner scanLongLong:&v]) {
+  if ([scanner scanLongLong:&v] && scanner.scanLocation == s.length) {
     return [ClojureLangRT boxWithLong:v];
-  } else if ([scanner scanDouble:&d]) {
+  }
+
+  double d;
+  scanner = [NSScanner scannerWithString:s];
+  if ([scanner scanDouble:&d] && scanner.scanLocation == s.length) {
     return [ClojureLangRT boxWithDouble:d];
   }
   return nil;
