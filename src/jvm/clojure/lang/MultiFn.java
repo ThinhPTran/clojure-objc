@@ -125,16 +125,30 @@ public class MultiFn extends AFn {
   }
 
   private boolean prefers(Object x, Object y) {
-    if ("class JavaObject".equals(String.valueOf(x))
-        || "class java.lang.Object".equals(String.valueOf(x))
-        || "class JavaObject".equals(String.valueOf(y))
-        || "class java.lang.Object".equals(String.valueOf(y))) {
-      return false;
-    }
-    
     if (x == y)
       return false;
 
+    if (x instanceof Class && y instanceof Class) {
+      for (ISeq ps = RT.keys(getPreferTable()); ps != null; ps = ps.next()) {
+        Class xx = (Class)x;
+        Class yy = (Class)y;
+        Object k = ps.first();
+        if (k instanceof Class && (x == k || ((Class) k).isAssignableFrom(xx))) {
+          IPersistentSet xprefs = (IPersistentSet) getPreferTable().valAt(k);
+          if (xprefs.contains(y)) {
+            return true;
+          }
+          for (ISeq xp = RT.seq(xprefs); xp != null; xp = xp.next()) {
+            Object p = xp.first();
+            if (p instanceof Class && (y == p || ((Class) p).isAssignableFrom(yy))) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+    
     IPersistentSet xprefs = (IPersistentSet) getPreferTable().valAt(x);
     if (xprefs != null && xprefs.contains(y))
       return true;
