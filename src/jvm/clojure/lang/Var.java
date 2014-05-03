@@ -276,8 +276,13 @@ public Object doReset(Object val)  {
     }
 
 public void setMeta(IPersistentMap m) {
-    //ensure these basis keys
-    resetMeta(m.assoc(nameKey, sym).assoc(nsKey, ns));
+    resetMeta(m);
+}
+
+@Override
+public IPersistentMap meta() {
+    // ensure these basis keys
+    return super.meta().assoc(nameKey, sym).assoc(nsKey, ns);
 }
 
 public void setMacro() {
