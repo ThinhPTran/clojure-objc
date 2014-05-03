@@ -32,6 +32,9 @@ String _str;
 public static Keyword intern(Symbol sym){
 	if(sym.meta() != null)
 		sym = (Symbol) sym.withMeta(null);
+	if (table.containsKey(sym)) {
+	  return table.get(sym).get();
+	}
 	Util.clearCache(rq, table);
 	Keyword k = new Keyword(sym);
 	Reference<Keyword> existingRef = table.putIfAbsent(sym, new WeakReference<Keyword>(k,rq));
