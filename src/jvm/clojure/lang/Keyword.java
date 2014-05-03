@@ -24,52 +24,12 @@ import java.lang.ref.SoftReference;
 public class Keyword implements IFn, Comparable, Named, Serializable, IHashEq {
 
 private static ConcurrentHashMap<Symbol, Reference<Keyword>> table = new ConcurrentHashMap();
-static Symbol lineSymbol = Symbol.intern("line");
-static Keyword line = new Keyword(lineSymbol);
-static Symbol columnSymbol = Symbol.intern("column");
-static Keyword column = new Keyword(columnSymbol);
-static Symbol addedSymbol = Symbol.intern("added");
-static Keyword added = new Keyword(addedSymbol);
-static Symbol fileSymbol = Symbol.intern("file");
-static Keyword file = new Keyword(fileSymbol);
-static Symbol arglistsSymbol = Symbol.intern("arglists");
-static Keyword arglists = new Keyword(arglistsSymbol);
-static Symbol docSymbol = Symbol.intern("doc");
-static Keyword doc = new Keyword(docSymbol);
-static Symbol tagSymbol = Symbol.intern("tag");
-static Keyword tag = new Keyword(tagSymbol);
-static Symbol staticSymbol = Symbol.intern("static");
-static Keyword static_ = new Keyword(staticSymbol);
-static Symbol privateSymbol = Symbol.intern("private");
-static Keyword private_ = new Keyword(privateSymbol);
-static Symbol inlineSymbol = Symbol.intern("inline");
-static Keyword inline = new Keyword(inlineSymbol);
-static Symbol dynamicSymbol = Symbol.intern("dynamic");
-static Keyword dynamic = new Keyword(dynamicSymbol);
-static Symbol oninterfaceSymbol = Symbol.intern("on-interface");
-static Keyword oninterface = new Keyword(oninterfaceSymbol);
-static Symbol inlinearitiesSymbol = Symbol.intern("inline-arities");
-static Keyword inlinearities = new Keyword(inlinearitiesSymbol);
-
 static final ReferenceQueue rq = new ReferenceQueue();
 public final Symbol sym;
 final int hasheq;
 String _str;
 
 public static Keyword intern(Symbol sym){
-  if (lineSymbol.equals(sym)) return line;
-  if (fileSymbol.equals(sym)) return file;
-  if (columnSymbol.equals(sym)) return column;
-  if (addedSymbol.equals(sym)) return added;
-  if (docSymbol.equals(sym)) return doc;
-  if (tagSymbol.equals(sym)) return tag;
-  if (privateSymbol.equals(sym)) return private_;
-  if (staticSymbol.equals(sym)) return static_;
-  if (oninterfaceSymbol.equals(sym)) return oninterface;
-  if (inlineSymbol.equals(sym)) return inline;
-  if (dynamicSymbol.equals(sym)) return dynamic;
-  if (arglistsSymbol.equals(sym)) return arglists;
-  if (inlinearitiesSymbol.equals(sym)) return inlinearities;
 	if(sym.meta() != null)
 		sym = (Symbol) sym.withMeta(null);
 	Util.clearCache(rq, table);

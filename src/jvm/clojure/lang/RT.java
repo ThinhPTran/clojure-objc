@@ -61,7 +61,7 @@ public class RT {
   static AtomicInteger id = new AtomicInteger(1);
 
   // simple-symbol->class
-  final static IPersistentMap DEFAULT_IMPORTS = map(
+  final static IPersistentMap DEFAULT_IMPORTS = ObjC.objc ? map() : map(
       // Symbol.intern("RT"), "clojure.lang.RT",
       // Symbol.intern("Num"), "clojure.lang.Num",
       // Symbol.intern("Symbol"), "clojure.lang.Symbol",
