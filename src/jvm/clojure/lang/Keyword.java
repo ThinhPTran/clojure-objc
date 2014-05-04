@@ -33,7 +33,10 @@ public static Keyword intern(Symbol sym){
 	if(sym.meta() != null)
 		sym = (Symbol) sym.withMeta(null);
 	if (table.containsKey(sym)) {
-	  return table.get(sym).get();
+	  Keyword k = table.get(sym).get();
+	  if (k != null) {
+	    return k;
+	  }
 	}
 	Util.clearCache(rq, table);
 	Keyword k = new Keyword(sym);

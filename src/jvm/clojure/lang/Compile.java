@@ -82,6 +82,8 @@ public class Compile {
         out.flush();
         compile.invoke(Symbol.intern(lib));
       }
+    } catch (Exception e) {
+      e.printStackTrace();
     } finally {
       Var.popThreadBindings();
       try {

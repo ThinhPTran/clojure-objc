@@ -228,48 +228,64 @@
 
 (defmacro defnstype
   "nstype creates a new objc class.
-  Takes a name, a superclass and a list of methods.
-
-  The signature on the methods is optional when the method exists 
-  on the superclass, otherwise is mandatory.
-
-  For the list of all available types see: clojure.core/objc-types
-  
-  (nstype MyTextField UITextField
-        ([self :initWithFrame frame] ; Here the signature is not needed
-           (doto ($$ self :initWithFrame frame)
-             ($ :setDelegate self)))
-        ([^:bool self :textFieldShouldReturn ^:id field] 
-           ($ self :resignFirstResponder)
-           true))
-  "
-  [na super & methods]
-  (let [methods
-        (binding [dispatch-class (name na)]
-          (mapv walk/macroexpand-all methods))
-        na (name na)
-        super (name super)
-        i (map (fn [[args & body]]
-                 (let [self-sym (first args)
-                       args (next args)
-                       sel (take-nth 2 args)
-                       fields-vec (take-nth 2 (next args))
-                       fields (take (count fields-vec) (repeatedly gensym))
-                       fields-let (interleave fields-vec fields)
-                       types (map objc-meta-type
-                                  (cons self-sym fields-vec))
-                       types (if (nil? (first types)) nil (vec types))
-                       sel (if (pos? (count fields))
-                             (reduce str (map #(str (name %) ":") sel))
-                             (reduce str (map name sel)))]
-                   `[~sel [~types (fn [~self-sym ~@fields]
-                                    (let [~@fields-let] ~@body))]]))
-               methods)
-        i (into {} i)]
-    `($ ($ NSTypeImpl)
-        :makeClassWithName ~na
-        :superclass ~super
-        :map ~i)))
+ Takes a name, a superclass and a list of methods.
+ 
+ The signature on the methods is optional when the method exists
+ on the superclass, otherwise is mandatory.
+ 
+ For the list of all available types see: clojure.core/objc-types
+ 
+ (nstype MyTextField UITextField
+  ([self :initWithFrame frame] ; Here the signature is not needed
+   (doto ($$ self :initWithFrame frame)
+    ($ :setDelegate self)))
+  ([^:bool self :textFieldShouldReturn ^:id field]
+   ($ self :resignFirstResponder)
+   true))
+ "
+ [na super & methods]
+ (let [methods
+       (binding [dispatch-class (name na)]
+         (mapv walk/macroexpand-all methods))
+       na (name na)
+       super (name super)
+       fns (map
+            (fn [[args & body]]
+              (let [self-sym (first args)
+                    args (next args)
+                    sel (take-nth 2 args)
+                    fields-vec (take-nth 2 (next args))
+                    fields (take (count fields-vec) (repeatedly gensym))
+                    fields-let (interleave fields-vec fields)
+                    sel (if (pos? (count fields))
+                          (reduce str (map #(str (name %) ":") sel))
+                          (reduce str (map name sel)))
+                    fnname (symbol (str na ":" sel))]
+              `(defn ~fnname [~self-sym ~@fields]
+                 (let [~@fields-let] ~@body))))
+            methods)
+       i (map (fn [[args & body]]
+                (let [self-sym (first args)
+                      args (next args)
+                      sel (take-nth 2 args)
+                      fields-vec (take-nth 2 (next args))
+                      fields (take (count fields-vec) (repeatedly gensym))
+                      types (map objc-meta-type
+                                 (cons self-sym fields-vec))
+                      types (if (nil? (first types)) nil (vec types))
+                      sel (if (pos? (count fields))
+                            (reduce str (map #(str (name %) ":") sel))
+                            (reduce str (map name sel)))
+                      fnname (symbol (str na ":" sel))]
+                  `[~sel [~types ~fnname]]))
+              methods)
+       i (into {} i)]
+   `(do
+      ~@fns
+      ($ ($ NSTypeImpl)
+         :makeClassWithName ~na
+         :superclass ~super
+         :map ~i))))
 
 (defn remote-repl
   "Starts a remote repl"
