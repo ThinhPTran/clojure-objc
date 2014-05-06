@@ -249,37 +249,27 @@
          (mapv walk/macroexpand-all methods))
        na (name na)
        super (name super)
-       fns (map
-            (fn [[args & body]]
-              (let [self-sym (first args)
-                    args (next args)
-                    sel (take-nth 2 args)
-                    fields-vec (take-nth 2 (next args))
-                    fields (take (count fields-vec) (repeatedly gensym))
-                    fields-let (interleave fields-vec fields)
-                    sel (if (pos? (count fields))
-                          (reduce str (map #(str (name %) ":") sel))
-                          (reduce str (map name sel)))
-                    fnname (symbol (str na ":" sel))]
-              `(defn ~fnname [~self-sym ~@fields]
-                 (let [~@fields-let] ~@body))))
-            methods)
-       i (map (fn [[args & body]]
-                (let [self-sym (first args)
-                      args (next args)
-                      sel (take-nth 2 args)
-                      fields-vec (take-nth 2 (next args))
-                      fields (take (count fields-vec) (repeatedly gensym))
-                      types (map objc-meta-type
-                                 (cons self-sym fields-vec))
-                      types (if (nil? (first types)) nil (vec types))
-                      sel (if (pos? (count fields))
-                            (reduce str (map #(str (name %) ":") sel))
-                            (reduce str (map name sel)))
-                      fnname (symbol (str na ":" sel))]
-                  `[~sel [~types ~fnname]]))
-              methods)
-       i (into {} i)]
+       fnsi (map
+             (fn [[args & body]]
+               (let [self-sym (first args)
+                     args (next args)
+                     sel (take-nth 2 args)
+                     fields-vec (take-nth 2 (next args))
+                     fields (take (count fields-vec) (repeatedly gensym))
+                     fields-let (interleave fields-vec fields)
+                     types (map objc-meta-type
+                                (cons self-sym fields-vec))
+                     types (if (nil? (first types)) nil (vec types))
+                     sel (if (pos? (count fields))
+                           (reduce str (map #(str (name %) ":") sel))
+                           (reduce str (map name sel)))
+                     fnname (symbol (str na ":" sel))]
+                 [`(defn ~fnname [~self-sym ~@fields]
+                     (let [~@fields-let] ~@body))
+                  `[~sel [~types ~fnname]]]))
+             methods)
+       fns (map first fnsi)
+       i (into {} (map second fnsi))]
    `(do
       ~@fns
       ($ ($ NSTypeImpl)
