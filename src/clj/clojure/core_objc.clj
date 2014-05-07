@@ -173,8 +173,6 @@
       `(defn ~n [& args#] (ccall ~nn (apply conj ~types (types-for-vals (drop (dec (count ~types)) args#))) args#))
       `(defn ~n [& args#] (ccall ~nn ~types args#)))))
 
-(def objc-meta-type (comp objc-types ffirst meta))
-
 (defmacro nsproxy
   "nsproxy mocks an object. It's intended to implement protocols/delegators.
 
@@ -186,7 +184,8 @@
       true))
   "
   [& methods]
-  (let [has-class (not (list? (first methods)))
+  (let [objc-meta-type (comp objc-types ffirst meta)
+        has-class (not (list? (first methods)))
         clazz (when has-class (name (first methods)))
         methods (if has-class (next methods) methods)
         i (map (fn [[args & body]]
@@ -251,7 +250,8 @@
        super (name super)
        fnsi (map
              (fn [[args & body]]
-               (let [self-sym (first args)
+               (let [objc-meta-type (comp objc-types ffirst meta)
+                     self-sym (first args)
                      args (next args)
                      sel (take-nth 2 args)
                      fields-vec (take-nth 2 (next args))
