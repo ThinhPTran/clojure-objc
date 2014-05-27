@@ -23,7 +23,7 @@
   "Creates an objc selector.
 
   (sel \"some:selector:\")"
-  [s]
+  [^String s]
   (clojure.lang.Selector. s))
 
 (defn objc-class

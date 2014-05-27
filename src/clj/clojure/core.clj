@@ -6392,39 +6392,6 @@
               coll)
       persistent!))
 
-#_(require '[clojure.java.io :as jio])
-
-#_(defn- normalize-slurp-opts
-  [opts]
-  (if (string? (first opts))
-    (do
-      (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
-      [:encoding (first opts)])
-    opts))
-
-#_(defn slurp
-  "Opens a reader on f and reads all its contents, returning a string.
-  See clojure.java.io/reader for a complete list of supported arguments."
-  {:added "1.0"}
-  ([f & opts]
-     (let [opts (normalize-slurp-opts opts)
-           sb (StringBuilder.)]
-       (with-open [^java.io.Reader r (apply jio/reader f opts)]
-         (loop [c (.read r)]
-           (if (neg? c)
-             (str sb)
-             (do
-               (.append sb (char c))
-               (recur (.read r)))))))))
-
-#_(defn spit
-  "Opposite of slurp.  Opens f with writer, writes content, then
-  closes f. Options passed to clojure.java.io/writer."
-  {:added "1.2"}
-  [f content & options]
-  (with-open [^java.io.Writer w (apply jio/writer f options)]
-    (.write w (str content))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; futures (needs proxy);;;;;;;;;;;;;;;;;;
 (defn future-call
   "Takes a function of no args and yields a future object that will
@@ -7058,3 +7025,39 @@
 ;   (throw t)))
 
 (load "core_objc")
+
+(when-not objc?
+  #_(require '[clojure.java.io :as jio])
+
+  (defn- normalize-slurp-opts
+    [opts]
+    (if (string? (first opts))
+      (do
+        (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
+        [:encoding (first opts)])
+      opts))
+
+  (defn slurp
+    "Opens a reader on f and reads all its contents, returning a string.
+  See clojure.java.io/reader for a complete list of supported arguments."
+    {:added "1.0"}
+    ([f & opts]
+       (load "clojure/java/io")
+       (let [opts (normalize-slurp-opts opts)
+             sb (StringBuilder.)]
+         (with-open [^java.io.Reader r (apply (ns-resolve 'clojure.java.io 'reader) f opts)]
+           (loop [c (.read r)]
+             (if (neg? c)
+               (str sb)
+               (do
+                 (.append sb (char c))
+                 (recur (.read r)))))))))
+
+  (defn spit
+    "Opposite of slurp.  Opens f with writer, writes content, then
+  closes f. Options passed to clojure.java.io/writer."
+    {:added "1.2"}
+    [f content & options]
+    (load "clojure/java/io")
+    (with-open [^java.io.Writer w (apply (ns-resolve 'clojure.java.io 'writer) f options)]
+      (.write w (str content)))))
