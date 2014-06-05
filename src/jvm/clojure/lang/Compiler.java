@@ -5625,8 +5625,8 @@ public class Compiler implements Opcodes {
             }
             if (METHOD.deref() instanceof NewInstanceMethod) {
               NewInstanceMethod m = (NewInstanceMethod) METHOD.deref();
-              if (m.thisName.name != null
-                  && lb.name.equals(munge(m.thisName.name))) {
+              Symbol tname = m.thisName;
+              if (tname.name != null && lb.name.equals(munge(tname.name))) {
                 return "this";
               }
             }
@@ -6040,7 +6040,7 @@ public class Compiler implements Opcodes {
           // todo don't hardwire this
           EXCEPTION_TYPES, cv);
       gen.visitCode();
-      
+
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < argLocals.count(); i++) {
         if (sb.length() > 0) {
@@ -6052,7 +6052,7 @@ public class Compiler implements Opcodes {
       emitSource("public final " + printClass(retClass) + " invokePrim("
           + sb.toString() + ") {");
       tab();
-      
+
       if (hasException) {
         emitSource("try {");
         tab();
@@ -6078,7 +6078,7 @@ public class Compiler implements Opcodes {
       } finally {
         Var.popThreadBindings();
       }
-      
+
       if (hasException) {
         untab();
         emitSource("} catch (Exception ___e) {");

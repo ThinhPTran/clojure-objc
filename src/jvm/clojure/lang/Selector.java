@@ -55,4 +55,9 @@ public class Selector extends RestFn implements Named {
   public int getRequiredArity() {
     return 1;
   }
+  
+  @Override
+  public String toString() {
+    return sel;
+  }
 }

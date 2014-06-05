@@ -20,7 +20,6 @@
 #import "clojure/core_vec.h"
 #import "clojure/core_assoc.h"
 #import "clojure/core_dissoc.h"
-#import "java/util/UUID.h"
 
 static NSSocketImpl *nssocket;
 static ClojureLangAtom *responses;
@@ -39,7 +38,7 @@ static volatile id pendingcall = nil;
         id s = [ClojureLangRT secondWithId:msg];
         id args = [ClojureLangRT thirdWithId:msg];
         id r = [(ClojureLangAFn*)s applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
-        [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:r]]];
+        [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:r]]];
     }
     @catch (NSException *exception) {
         NSLog(@"%@ %@", exception, [exception callStackSymbols]);
@@ -82,11 +81,11 @@ static volatile id pendingcall = nil;
 +(id) callRemote:(id)sel args:(id)args {
     callremotes++;
     args = [Clojurecore_vec_get_VAR_() invokeWithId:args];
-    id i = [[JavaUtilUUID randomUUID] description];
-    [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[[Clojurecore_vector VAR] invokeWithId:i withId:sel withId:args]]];
+    id i = [[ReplClient randomUUID] description];
+    [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:sel withId:args]]];
     while (true) {
-        if ([ClojureLangRT containsWithId:[responses deref] withId:i]) {
-            id v = [ClojureLangRT getWithId:[responses deref] withId:i];
+        if ([[responses deref] containsKeyWithId:i]) {
+            id v = [[responses deref] valAtWithId:i];
             [responses swapWithClojureLangIFn:Clojurecore_dissoc_get_VAR_() withId:i];
             callremotes--;
             return v;
@@ -99,6 +98,13 @@ static volatile id pendingcall = nil;
             }
         }
     }
+}
+
++ (NSString *)randomUUID {
+    CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
+    NSString *uuidString = (NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
+    CFRelease(uuid);
+    return uuidString;
 }
 
 @end

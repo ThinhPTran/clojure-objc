@@ -12,7 +12,6 @@
 (def responses (atom {}))
 
 (defn process-msg [f]
-  (println "PROCESS MSG" f)
   (let [[id f args] f]
     (.println @repl
               (pr-str [id (try (apply f args)
@@ -31,7 +30,6 @@
         (let [r (id @responses)]
           (swap! responses dissoc id)
           (swap! in-call-remote dec)
-          (println "CALL REMOTE" sel r)
           r)
         (do
           (Thread/sleep 10)
@@ -39,6 +37,8 @@
             (reset! pending nil)
             (process-msg w))
           (recur))))))
+
+(def process-msg-agent (agent nil))
 
 (defn listen [port]
   (future
@@ -57,7 +57,7 @@
                 (let [[id r] f]
                   (swap! responses assoc id r))
                 (if (zero? @in-call-remote)
-                  (process-msg f)
+                  (send process-msg-agent (fn [_] (process-msg f)))
                   (reset! pending f)))
               (recur (read in)))
             (catch Exception e

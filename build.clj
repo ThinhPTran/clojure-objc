@@ -62,7 +62,7 @@
 (sh+ "cp" "-R" "src/objc/." "target/objc")
 (sh+ "cp" "-R" "src/ffi/." "target/objc")
 (sh+ "zip" "-r" "target/objc.jar" "target/gen" "src/jvm" "test/java")
-(sh+ "j2objc" "-d" "target/objc" "-classpath" 
+(sh+ "j2objc" "-d" "target/objc" "--final-methods-as-functions" "--batch-translate-max=300" "-J-Xmx2G" "-classpath" 
      "target/classes:target/test-classes" 
      "target/objc.jar")
 
@@ -81,5 +81,3 @@
   (when (.exists a)
     (.delete a))
   (sh+ "lipo" "-create" "-output" "target/libclojure-objc.a" "target/iphoneos/libclojure-objc.a" "target/iphonesimulator/libclojure-objc.a"))
-
-

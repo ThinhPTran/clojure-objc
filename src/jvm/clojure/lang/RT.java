@@ -298,7 +298,15 @@ public class RT {
     return arglist;
   }
 
-  public static native void dispatchInMain(final AFn fn) /*-[
+  public static void dispatchInMain(final AFn fn) {
+    if (ObjC.objc) {
+      dispatchInMainNative(fn);
+    } else {
+      fn.invoke();
+    }
+  }
+  
+  public static native void dispatchInMainNative(final AFn fn) /*-[
   if ([NSThread isMainThread]) {
       [fn invoke];
     } else {
@@ -308,7 +316,15 @@ public class RT {
     }
   ]-*/;
   
-  public static native void dispatchInMainSync(final AFn fn) /*-[
+  public static void dispatchInMainSync(final AFn fn) {
+    if (ObjC.objc) {
+      dispatchInMainSyncNative(fn);
+    } else {
+      fn.invoke();
+    }
+  }
+  
+  public static native void dispatchInMainSyncNative(final AFn fn) /*-[
     if ([NSThread isMainThread]) {
       [fn invoke];
     } else {
