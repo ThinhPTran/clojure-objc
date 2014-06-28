@@ -7,6 +7,7 @@
 //
 
 #import "NSCommon.h"
+#import "clojure/lang/RemoteRepl.h"
 #import "clojure/lang/AFn.h"
 #import "clojure/lang/RT.h"
 #import "clojure/lang/Atom.h"
@@ -1234,6 +1235,14 @@ dispatch_fastf(params, ##__VA_ARGS__) \
 }\
 
 + (id) invokeSel:(id)object withSelector:(NSString*)selector withArgs:(id<ClojureLangISeq>)arguments {
+    if ([object isKindOfClass:[NSString class]] && ClojureLangRemoteRepl_get_connected_()) {
+        if (([selector isEqualToString:@"autorelease"])) {
+            return object;
+        } else if ([selector isEqualToString:@"release"]) {
+            return nil;
+        }
+    }
+    
     SEL sel = NSSelectorFromString(selector);
     NSMethodSignature *sig = [([object isKindOfClass:[WeakRef class]] ? [(WeakRef*)object deref] : object) methodSignatureForSelector:sel];
     if (sig == nil) {

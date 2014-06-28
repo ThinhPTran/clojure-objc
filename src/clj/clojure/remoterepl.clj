@@ -5,61 +5,51 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
-(def pending (atom nil))
+(def socket (atom nil))
+(def socket1 (atom nil))
+(def socket2 (atom nil))
 
-(def repl (atom nil))
-
-(def responses (atom {}))
-
-(defn process-msg [f]
+(defn process-msg [out f]
   (let [[id f args] f]
-    (.println @repl
-              (pr-str [id (try (apply f args)
-                               (catch Exception e
-                                 (.printStackTrace e)))]))))
-
-(def in-call-remote (atom 0))
+    (->> [id (apply f args)]
+         pr-str 
+         (.println out))))
 
 (defn call-remote [sel args]
-  (swap! in-call-remote inc)
   (let [args (vec args)
         id (keyword (uuid))]
-    (.println @repl (pr-str [id sel args]))
-    (loop []
-      (if (some #{id} (keys @responses))
-        (let [r (id @responses)]
-          (swap! responses dissoc id)
-          (swap! in-call-remote dec)
-          r)
-        (do
-          (Thread/sleep 10)
-          (when-let [w @pending]
-            (reset! pending nil)
-            (process-msg w))
-          (recur))))))
-
-(def process-msg-agent (agent nil))
+    (.println (:out @socket) (pr-str [id sel args]))
+    (loop [msg (read (:in @socket))]
+      (if (instance? String msg)
+        (throw (Exception. msg))
+        (if (= 2 (count msg))
+          (let [[id r] msg]
+            r)
+          (do
+            (process-msg (:out @socket) msg)
+            (recur (read (:in @socket)))))))))
 
 (defn listen [port]
   (future
-    (let [server (ServerSocket. port)]
+    (let [server (ServerSocket. 35813)]
       (println "Remote repl listening on port" port)
-      (loop []
-        (let [s (.accept server)
-              out (PrintWriter. (.getOutputStream s) true)
-              in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
-          (clojure.lang.RemoteRepl/setConnected true)
-          (println "Client has connected!")
-          (try
-            (reset! repl out)
-            (loop [f (read in)]
-              (if (= 2 (count f))
-                (let [[id r] f]
-                  (swap! responses assoc id r))
-                (if (zero? @in-call-remote)
-                  (send process-msg-agent (fn [_] (process-msg f)))
-                  (reset! pending f)))
-              (recur (read in)))
-            (catch Exception e
-              (.printStackTrace e))))
-        (recur)))))
+      (let [s (.accept server)
+            out (PrintWriter. (.getOutputStream s) true)
+            in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
+        (clojure.lang.RemoteRepl/setConnected true)
+        (println "Client has connected!")
+        (reset! socket1 {:out out :in in})
+        (reset! socket {:out out :in in}))))
+
+  (future
+    (let [server (ServerSocket. 35814)
+          s (.accept server)
+          out (PrintWriter. (.getOutputStream s) true)
+          in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]
+      (reset! socket2 {:out out :in in})
+      (loop [f (read in)]
+        (let [s @socket]
+          (reset! socket @socket2)
+          (process-msg out f)
+          (reset! socket s))
+        (recur (read in))))))

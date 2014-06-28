@@ -22,80 +22,55 @@
 #import "clojure/core_dissoc.h"
 
 static NSSocketImpl *nssocket;
-static ClojureLangAtom *responses;
-static int callremotes = 0;
-static volatile id pendingcall = nil;
+static NSSocketImpl *nssocket2;
 
 @implementation ReplClient
 
-+(void)initialize {
-    responses = [[ClojureLangAtom alloc] initWithId:ClojureLangPersistentHashMap_get_EMPTY_()];
-}
-
-+(void) processCall2:(id)msg {
++(void) processCall2:(NSSocketImpl*)socket msg:(id)msg {
     @try {
         id i = [ClojureLangRT firstWithId:msg];
         id s = [ClojureLangRT secondWithId:msg];
         id args = [ClojureLangRT thirdWithId:msg];
         id r = [(ClojureLangAFn*)s applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
-        [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:r]]];
+        [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:nil withId:r]]];
     }
     @catch (NSException *exception) {
+        [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[exception callStackSymbols]]];
         NSLog(@"%@ %@", exception, [exception callStackSymbols]);
     }
 }
 
-+(void) processCall:(id)msg {
++(void) processCall:(NSSocketImpl*)socket msg:(id)msg {
     if ([NSThread isMainThread]) {
-        [ReplClient processCall2:msg];
+        [ReplClient processCall2:socket msg:msg];
     } else {
         dispatch_sync(dispatch_get_main_queue(), ^{
-            [ReplClient processCall2:msg];
+            [ReplClient processCall2:socket msg:msg];
         });
     }
 }
 
-+(void) connect: (NSString*) host port:(NSString*) port {
++(void) connect: (NSString*) host {
+    nssocket = [[NSSocketImpl alloc] initWithHost:host withPort:@"35813"];
+    nssocket2 = [[NSSocketImpl alloc] initWithHost:host withPort:@"35814"];
+    [ClojureLangRemoteRepl setConnectedWithBoolean:YES];
     dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        nssocket = [[NSSocketImpl alloc] initWithHost:host withPort:port];
-        [ClojureLangRemoteRepl setConnectedWithBoolean:YES];
         while (true) {
-            id msg = [ClojureLangRT readStringWithNSString:[nssocket read]];
-            if ([ClojureLangRT countFromWithId:msg] == 2) {
-                id i = [ClojureLangRT firstWithId:msg];
-                id s = [ClojureLangRT secondWithId:msg];
-                [responses swapWithClojureLangIFn:Clojurecore_assoc_get_VAR_() withId:i withId:s];
-            } else {
-                if (callremotes == 0) {
-                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                        [ReplClient processCall:msg];
-                    });
-                } else {
-                    pendingcall = msg;
-                }
-            }
+            [ReplClient processCall:nssocket msg:[ClojureLangRT readStringWithNSString:[nssocket read]]];
         }
     });
 }
 
 +(id) callRemote:(id)sel args:(id)args {
-    callremotes++;
     args = [Clojurecore_vec_get_VAR_() invokeWithId:args];
     id i = [[ReplClient randomUUID] description];
-    [nssocket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:sel withId:args]]];
+    [nssocket2 println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:sel withId:args]]];
     while (true) {
-        if ([[responses deref] containsKeyWithId:i]) {
-            id v = [[responses deref] valAtWithId:i];
-            [responses swapWithClojureLangIFn:Clojurecore_dissoc_get_VAR_() withId:i];
-            callremotes--;
-            return v;
+        id v = [ClojureLangRT readStringWithNSString:[nssocket2 read]];
+        if ([ClojureLangRT countWithId:v] == 3) {
+            [ReplClient processCall:nssocket2 msg:v];
         } else {
-            usleep(10000);
-            if (pendingcall != nil) {
-                id work = pendingcall;
-                pendingcall = nil;
-                [ReplClient processCall:work];
-            }
+            return [ClojureLangRT secondWithId:v];
         }
     }
 }

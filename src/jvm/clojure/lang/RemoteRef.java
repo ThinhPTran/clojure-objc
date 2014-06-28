@@ -6,6 +6,8 @@ package clojure.lang;
 
 public class RemoteRef extends RestFn {
 
+  private static Object nsPlaceholderString = new Object();
+  
   private static final String OBJC_REF = "objc-ref-";
 
   private static final String JVM_REF = "jvm-ref-";
@@ -20,7 +22,15 @@ public class RemoteRef extends RestFn {
     i.reset(RT.map());
   }
   
+  static {
+    register(nsPlaceholderString);
+  }
+  
   public static Object register(final Object o) {
+    if (classDescription(o).equals("NSPlaceholderString")) {
+      nativeRelease(o);
+      return register(nsPlaceholderString);
+    }
     IPersistentMap lookup = (IPersistentMap) i.deref();
     Object curr = lookup.valAt(o);
     if (curr == null) {
@@ -45,6 +55,14 @@ public class RemoteRef extends RestFn {
     }
   }
 
+  private static native Object classDescription(Object o) /*-[
+    return [[o class] description];
+  ]-*/;
+
+  private static native void nativeRelease(Object o) /*-[
+    [o release];
+  ]-*/;
+
   private native static Object nativeGensym(String objcRef) /*-[
     return [Clojurecore_gensym_get_VAR_() invokeWithId:objcRef];
   ]-*/;
@@ -64,7 +82,12 @@ public class RemoteRef extends RestFn {
       if (id.startsWith(JVM_REF)) {
         return this;
       } else {
-        return (Object) RT.get(a.deref(), id);
+        Object o = (Object) RT.get(a.deref(), id);
+        if (o.equals(nsPlaceholderString)) {
+          return allocNativeString();
+        } else {
+          return o;
+        }
       }
     } else {
       if (id.startsWith(OBJC_REF)) {
@@ -74,6 +97,10 @@ public class RemoteRef extends RestFn {
       }
     }
   }
+
+  private static native Object allocNativeString() /*-[
+    return [NSString alloc]; // leak in repl
+  ]-*/;
 
   @Override
   protected Object doInvoke(Object args) {
