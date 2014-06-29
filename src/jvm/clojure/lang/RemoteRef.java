@@ -1,13 +1,13 @@
 package clojure.lang;
 
 /*-[
-#include "clojure/core_gensym.h"
-]-*/
+ #include "clojure/core_gensym.h"
+ ]-*/
 
 public class RemoteRef extends RestFn {
 
   private static Object nsPlaceholderString = new Object();
-  
+
   private static final String OBJC_REF = "objc-ref-";
 
   private static final String JVM_REF = "jvm-ref-";
@@ -21,21 +21,21 @@ public class RemoteRef extends RestFn {
     a.reset(RT.map());
     i.reset(RT.map());
   }
-  
+
   static {
     register(nsPlaceholderString);
   }
-  
+
   public static Object register(final Object o) {
-    if (classDescription(o).equals("NSPlaceholderString")) {
+    if (ObjC.objc && classDescription(o).equals("NSPlaceholderString")) {
       nativeRelease(o);
       return register(nsPlaceholderString);
     }
     IPersistentMap lookup = (IPersistentMap) i.deref();
     Object curr = lookup.valAt(o);
     if (curr == null) {
-      Object invoke = ObjC.objc ? nativeGensym(OBJC_REF) : ((AFn) gensym.getRawRoot())
-          .invoke(JVM_REF);
+      Object invoke = ObjC.objc ? nativeGensym(OBJC_REF) : ((AFn) gensym
+          .getRawRoot()).invoke(JVM_REF);
       final String id = ((Symbol) invoke).getName();
       a.swap(new AFn() {
         @Override
@@ -56,16 +56,16 @@ public class RemoteRef extends RestFn {
   }
 
   private static native Object classDescription(Object o) /*-[
-    return [[o class] description];
-  ]-*/;
+                                                          return [[o class] description];
+                                                          ]-*/;
 
   private static native void nativeRelease(Object o) /*-[
-    [o release];
-  ]-*/;
+                                                     [o release];
+                                                     ]-*/;
 
   private native static Object nativeGensym(String objcRef) /*-[
-    return [Clojurecore_gensym_get_VAR_() invokeWithId:objcRef];
-  ]-*/;
+                                                            return [Clojurecore_gensym_get_VAR_() invokeWithId:objcRef];
+                                                            ]-*/;
 
   private String id;
 
@@ -99,8 +99,8 @@ public class RemoteRef extends RestFn {
   }
 
   private static native Object allocNativeString() /*-[
-    return [NSString alloc]; // leak in repl
-  ]-*/;
+                                                   return [NSString alloc]; // leak in repl
+                                                   ]-*/;
 
   @Override
   protected Object doInvoke(Object args) {

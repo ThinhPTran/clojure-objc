@@ -35,10 +35,10 @@ public class RemoteRepl {
     RemoteRef.reset();
   }
   
-  public static void listen(int port) {
+  public static void listen() {
     try {
       RT.load("clojure/remoterepl");
-      listen.invoke(port);
+      listen.invoke();
     } catch (Exception e) {
       throw Util.sneakyThrow(e);
     }

@@ -299,10 +299,15 @@ public class RT {
   }
 
   public static void dispatchInMain(final AFn fn) {
-    if (ObjC.objc) {
-      dispatchInMainNative(fn);
-    } else {
-      fn.invoke();
+    Var.pushThreadBindings(mapUniqueKeys(RT.var("clojure.core", "force-main-thread"), true));
+    try {
+      if (ObjC.objc) {
+        dispatchInMainNative(fn);
+      } else {
+        fn.invoke();
+      }
+    } catch (Exception e) {
+      Var.popThreadBindings();
     }
   }
   
@@ -317,10 +322,15 @@ public class RT {
   ]-*/;
   
   public static void dispatchInMainSync(final AFn fn) {
-    if (ObjC.objc) {
-      dispatchInMainSyncNative(fn);
-    } else {
-      fn.invoke();
+    Var.pushThreadBindings(mapUniqueKeys(RT.var("clojure.core", "force-main-thread"), true));
+    try {
+      if (ObjC.objc) {
+        dispatchInMainSyncNative(fn);
+      } else {
+        fn.invoke();
+      }
+    } catch (Exception e) {
+      Var.popThreadBindings();
     }
   }
   

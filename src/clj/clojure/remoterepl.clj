@@ -5,34 +5,47 @@
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 
+(def repl-main-thread (atom nil))
 (def socket (atom nil))
 (def socket1 (atom nil))
 (def socket2 (atom nil))
 
 (defn process-msg [out f]
-  (let [[id f args] f]
-    (->> [id (apply f args)]
+  (let [[run-in-main id f args] f]
+    (->> [id (if run-in-main
+               (binding [force-main-thread true]
+                 (apply f args))
+               (apply f args))]
          pr-str 
          (.println out))))
 
 (defn call-remote [sel args]
   (let [args (vec args)
         id (keyword (uuid))]
-    (.println (:out @socket) (pr-str [id sel args]))
+    (.println (:out @socket)
+              (pr-str [(or (= (Thread/currentThread) @repl-main-thread)
+                           (and (bound? #'force-main-thread) force-main-thread))
+                       id sel args]))
     (loop [msg (read (:in @socket))]
       (if (instance? String msg)
         (throw (Exception. msg))
         (if (= 2 (count msg))
-          (let [[id r] msg]
-            r)
+          (let [[rid r] msg]
+            (if (= rid id)
+              r
+              (do
+                (.println (:out @socket) (pr-str [:retry rid]))
+                                        ; retries until the sender gets the response
+                (recur (read (:in @socket))))))
           (do
             (process-msg (:out @socket) msg)
             (recur (read (:in @socket)))))))))
 
-(defn listen [port]
+(defn listen []
+  (reset! repl-main-thread (Thread/currentThread))
   (future
     (let [server (ServerSocket. 35813)]
-      (println "Remote repl listening on port" port)
+      (println "Remote repl started")
       (let [s (.accept server)
             out (PrintWriter. (.getOutputStream s) true)
             in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))]

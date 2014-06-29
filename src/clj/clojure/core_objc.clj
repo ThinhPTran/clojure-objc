@@ -4,6 +4,8 @@
 
 (def ^:dynamic dispatch-class)
 
+(def ^:dynamic force-main-thread)
+
 (def objc? (clojure.lang.ObjC/objc))
 
 (when-not objc?
@@ -279,6 +281,4 @@
 
 (defn remote-repl
   "Starts a remote repl"
-  ([] (remote-repl 35813))
-  ([port]
-     (clojure.lang.RemoteRepl/listen port)))
+  [] (clojure.lang.RemoteRepl/listen))
