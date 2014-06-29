@@ -34,7 +34,7 @@
             (if (= rid id)
               r
               (do
-                (.println (:out @socket) (pr-str [:retry rid]))
+                (.println (:out @socket) (pr-str [:retry id]))
                                         ; retries until the sender gets the response
                 (recur (read (:in @socket))))))
           (do

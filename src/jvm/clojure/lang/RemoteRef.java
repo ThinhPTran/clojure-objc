@@ -62,6 +62,10 @@ public class RemoteRef extends RestFn {
   private static native void nativeRelease(Object o) /*-[
                                                      [o release];
                                                      ]-*/;
+  
+  private static native void nativeRetain(Object o) /*-[
+  [o retain];
+  ]-*/;
 
   private native static Object nativeGensym(String objcRef) /*-[
                                                             return [Clojurecore_gensym_get_VAR_() invokeWithId:objcRef];
@@ -80,6 +84,7 @@ public class RemoteRef extends RestFn {
   public Object get() {
     if (ObjC.objc) {
       if (id.startsWith(JVM_REF)) {
+        nativeRetain(this);
         return this;
       } else {
         Object o = (Object) RT.get(a.deref(), id);
@@ -99,7 +104,7 @@ public class RemoteRef extends RestFn {
   }
 
   private static native Object allocNativeString() /*-[
-                                                   return [NSString alloc]; // leak in repl
+                                                   return [NSString alloc]; // leaks in repl
                                                    ]-*/;
 
   @Override
