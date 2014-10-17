@@ -373,12 +373,11 @@
       :else 97
       :else 97N
       :a (char 97)))
-  (comment
-    (testing "test error on duplicate test constants"
-      (is (thrown-with-msg?
-           IllegalArgumentException
-           #"Duplicate case test constant: 1"
-           (eval `(case 0 1 :x 1 :y))))))
+  (testing "test error on duplicate test constants"
+    (is (thrown-with-msg?
+          clojure.lang.Compiler$CompilerException
+          #"Duplicate case test constant: 1"
+          (eval `(case 0 1 :x 1 :y)))))
   (testing "test correct behaviour on Number truncation"
     (let [^Object x (Long. 8589934591)  ; force bindings to not be emitted as a primitive long
           ^Object y (Long. -1)]

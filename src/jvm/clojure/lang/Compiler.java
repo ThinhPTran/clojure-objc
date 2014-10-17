@@ -307,9 +307,7 @@ public class Compiler implements Opcodes {
       .intern("disable-locals-clearing");
   static final public Keyword elideMetaKey = Keyword.intern("elide-meta");
 
-  static final public Var COMPILER_OPTIONS = Var.intern(
-      Namespace.findOrCreate(Symbol.intern("clojure.core")),
-      Symbol.intern("*compiler-options*"), null).setDynamic();
+  static final public Var COMPILER_OPTIONS;
 
   public static void emitSource(String source) {
     if (Boolean.TRUE.equals(STOP_EMIT_SOURCE.deref())) {
@@ -358,6 +356,24 @@ public class Compiler implements Opcodes {
 
   static public Object getCompilerOption(Keyword k) {
     return RT.get(COMPILER_OPTIONS.deref(), k);
+  }
+
+  static {
+    Object compilerOptions = null;
+
+    for (Map.Entry e : System.getProperties().entrySet()) {
+      String name = (String) e.getKey();
+      String v = (String) e.getValue();
+      if (name.startsWith("clojure.compiler.")) {
+        compilerOptions = RT.assoc(compilerOptions,
+            RT.keyword(null, name.substring(1 + name.lastIndexOf('.'))),
+            RT.readString(v));
+      }
+    }
+
+    COMPILER_OPTIONS = Var.intern(
+        Namespace.findOrCreate(Symbol.intern("clojure.core")),
+        Symbol.intern("*compiler-options*"), compilerOptions).setDynamic();
   }
 
   static Object elideMeta(Object m) {
@@ -619,8 +635,10 @@ public class Compiler implements Opcodes {
           throw Util
               .runtimeException("Can't refer to qualified var that doesn't exist");
         if (!v.ns.equals(currentNS())) {
-          if (sym.ns == null)
+          if (sym.ns == null) {
             v = currentNS().intern(sym);
+            registerVar(v);
+          }
           // throw Util.runtimeException("Name conflict, can't def " + sym +
           // " because namespace: " + currentNS().name +
           // " refers to:" + v);
@@ -854,7 +872,7 @@ public class Compiler implements Opcodes {
   public static class ImportExpr implements Expr {
     public final String c;
     final static Method forNameMethod = Method
-        .getMethod("Class forName(String)");
+        .getMethod("Class classForNameNonLoading(String)");
     final static Method importClassMethod = Method
         .getMethod("Class importClass(Class)");
     final static Method derefMethod = Method.getMethod("Object deref()");
@@ -865,7 +883,7 @@ public class Compiler implements Opcodes {
 
     public Object eval() {
       Namespace ns = (Namespace) RT.CURRENT_NS.deref();
-      ns.importClass(RT.classForName(c));
+      ns.importClass(RT.classForNameNonLoading(c));
       return null;
     }
 
@@ -874,7 +892,7 @@ public class Compiler implements Opcodes {
       gen.invokeVirtual(VAR_TYPE, derefMethod);
       gen.checkCast(NS_TYPE);
       gen.push(c);
-      gen.invokeStatic(CLASS_TYPE, forNameMethod);
+      gen.invokeStatic(RT_TYPE, forNameMethod);
       gen.invokeVirtual(NS_TYPE, importClassMethod);
       // TODO proper fix
       String className = c;
@@ -1805,6 +1823,7 @@ public class Compiler implements Opcodes {
         .getMethod("Class forName(String)");
     final static Method invokeStaticMethodMethod = Method
         .getMethod("Object invokeStaticMethod(Class,String,Object[])");
+    final static Keyword warnOnBoxedKeyword = Keyword.intern("warn-on-boxed");
 
     public StaticMethodExpr(String source, int line, int column, Symbol tag,
         Class c, String methodName, IPersistentVector args) {
@@ -1855,6 +1874,28 @@ public class Compiler implements Opcodes {
                 SOURCE_PATH.deref(), line, column, methodName, c.getName(),
                 getTypeStringForArgs(args));
       }
+      if (method != null
+          && warnOnBoxedKeyword.equals(RT.UNCHECKED_MATH.deref())
+          && isBoxedMath(method)) {
+        RT.errPrintWriter().format(
+            "Boxed math warning, %s:%d:%d - call: %s.\n", SOURCE_PATH.deref(),
+            line, column, method.toString());
+      }
+    }
+
+    public static boolean isBoxedMath(java.lang.reflect.Method m) {
+      Class c = m.getDeclaringClass();
+      if (c.equals(Numbers.class)) {
+        WarnBoxedMath boxedMath = m.getAnnotation(WarnBoxedMath.class);
+        if (boxedMath != null)
+          return boxedMath.value();
+
+        Class[] argTypes = m.getParameterTypes();
+        for (Class argType : argTypes)
+          if (argType.equals(Object.class) || argType.equals(Number.class))
+            return true;
+      }
+      return false;
     }
 
     public Object eval() {
@@ -4234,7 +4275,7 @@ public class Compiler implements Opcodes {
     }
 
     public Class getJavaClass() {
-      return AFunction.class;
+      return tag != null ? HostExpr.tagToClass(tag) : AFunction.class;
     }
 
     protected void emitMethods(ClassVisitor cv) {
@@ -4271,6 +4312,7 @@ public class Compiler implements Opcodes {
         // Keyword.intern(null, "super-name"));
       }
       // fn.thisName = name;
+      // TODO http://dev.clojure.org/jira/browse/CLJ-1330
       String basename = enclosingMethod != null ? (enclosingMethod.objx.name + DOLLAR)
           : // "clojure.fns." +
           (munge(currentNS().name.name) + DOLLAR);
@@ -7445,6 +7487,14 @@ public class Compiler implements Opcodes {
         } catch (ArityException e) {
           // hide the 2 extra params for a macro
           throw new ArityException(e.actual - 2, e.name);
+        } catch (Throwable e) {
+          if (!(e instanceof CompilerException)) {
+            Integer line = (Integer) LINE.deref();
+            Integer column = (Integer) COLUMN.deref();
+            String source = (String) SOURCE.deref();
+            throw new CompilerException(source, line, column, e);
+          } else
+            throw (CompilerException) e;
         }
       } else {
         if (op instanceof Symbol) {

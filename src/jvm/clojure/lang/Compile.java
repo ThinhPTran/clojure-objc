@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.Map;
+import java.io.IOException;
 
 // Compiles libs and generates class files stored within the directory
 // named by the Java System property "clojure.compile.path". Arguments are
@@ -27,15 +28,10 @@ public class Compile {
   private static final String REFLECTION_WARNING_PROP = "clojure.compile.warn-on-reflection";
   private static final String UNCHECKED_MATH_PROP = "clojure.compile.unchecked-math";
 
-  private static final Var compile_path = RT.var("clojure.core",
-      "*compile-path*");
+  private static final Var compile_path = RT.var("clojure.core", "*compile-path*");
   private static final Var compile = RT.var("clojure.core", "compile");
-  private static final Var warn_on_reflection = RT.var("clojure.core",
-      "*warn-on-reflection*");
-  private static final Var unchecked_math = RT.var("clojure.core",
-      "*unchecked-math*");
-  private static final Var compiler_options = RT.var("clojure.core",
-      "*compiler-options*");
+  private static final Var warn_on_reflection = RT.var("clojure.core", "*warn-on-reflection*");
+  private static final Var unchecked_math = RT.var("clojure.core", "*unchecked-math*");
   private static Keyword sourceOutputKey = Keyword.intern("clojure.compiler.source-output");
 
   public static void main(String[] args) throws Exception {
@@ -56,26 +52,13 @@ public class Compile {
     boolean uncheckedMath = System.getProperty(UNCHECKED_MATH_PROP, "false")
         .equals("true");
 
-    IPersistentMap compilerOptions = RT.map();
-
-    for (Map.Entry e : System.getProperties().entrySet()) {
-      String name = (String) e.getKey();
-      String v = (String) e.getValue();
-      if (name.startsWith("clojure.compiler.")) {
-        compilerOptions = compilerOptions.assoc(
-            RT.keyword(null, name.substring(1 + name.lastIndexOf('.'))),
-            RT.readString(v));
-      }
-    }
-    
-    String sourceOutput = (String) (compilerOptions.containsKey(sourceOutputKey) ? compilerOptions.valAt(sourceOutputKey ) : "target/gen");
+    String sourceOutput = "target/gen"; //(String) (compilerOptions.containsKey(sourceOutputKey) ? compilerOptions.valAt(sourceOutputKey ) : "target/gen");
     new File(sourceOutput).mkdirs();
     
     try {
       Var.pushThreadBindings(RT.map(clojure.lang.Compiler.SOURCE_GEN_PATH,
           sourceOutput, compile_path, path, warn_on_reflection,
-          warnOnReflection, unchecked_math, uncheckedMath, compiler_options,
-          compilerOptions));
+          warnOnReflection, unchecked_math, uncheckedMath));
 
       for (String lib : args) {
         out.write("Compiling " + lib + " to " + path + "\n");

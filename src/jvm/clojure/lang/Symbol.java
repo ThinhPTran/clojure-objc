@@ -15,23 +15,21 @@ package clojure.lang;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
 
-public class Symbol extends AFn implements IObj, Comparable, Named,
-    Serializable, IHashEq {
-// these must be interned strings!
+public class Symbol extends AFn implements IObj, Comparable, Named, Serializable, IHashEq{
 final String ns;
 final String name;
 private int _hasheq;
 final IPersistentMap _meta;
-String _str;
+transient String _str;
 
-public String toString() {
-  if (_str == null) {
-    if (ns != null)
-      _str = (ns + "/" + name).intern();
-    else
-      _str = name;
-  }
-  return _str;
+public String toString(){
+	if(_str == null){
+		if(ns != null)
+			_str = (ns + "/" + name);
+		else
+			_str = name;
+	}
+	return _str;
 }
 
 public String getNamespace() {
@@ -53,15 +51,15 @@ static public Symbol create(String nsname) {
 }
 
 static public Symbol intern(String ns, String name){
-	return new Symbol(ns == null ? null : ns.intern(), name.intern());
+	return new Symbol(ns, name);
 }
 
 static public Symbol intern(String nsname){
 	int i = nsname.indexOf('/');
 	if(i == -1 || nsname.equals("/"))
-		return new Symbol(null, nsname.intern());
+		return new Symbol(null, nsname);
 	else
-		return new Symbol(nsname.substring(0, i).intern(), nsname.substring(i + 1).intern());
+		return new Symbol(nsname.substring(0, i), nsname.substring(i + 1));
 }
 
 private Symbol(String ns_interned, String name_interned){
@@ -78,17 +76,7 @@ public boolean equals(Object o) {
 
   Symbol symbol = (Symbol) o;
 
-  // identity compares intended, names are interned
-  boolean r = name == symbol.name && ns == symbol.ns;
-  if (!r && ObjC.objc) {
-    if (ns == null) {
-      return name.equals(symbol.name) && symbol.ns == null;
-    } else {
-      return name.equals(symbol.name) && ns.equals(symbol.name);
-    }
-  } else {
-    return r;
-  }
+  return Util.equals(ns,symbol.ns) && name.equals(symbol.name);
 }
 
 public int hashCode(){

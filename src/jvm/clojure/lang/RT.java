@@ -36,8 +36,10 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -577,6 +579,50 @@ static ISeq seqFrom(Object coll){
 	}
 }
 
+static public Iterator iter(Object coll){
+ if(coll instanceof Iterable)
+   return ((Iterable)coll).iterator();
+ else if(coll == null)
+   return new Iterator(){
+     public boolean hasNext(){
+       return false;
+     }
+
+     public Object next(){
+       throw new NoSuchElementException();
+     }
+
+     public void remove(){
+       throw new UnsupportedOperationException();
+     }
+   };
+ else if(coll instanceof Map){
+   return ((Map)coll).entrySet().iterator();
+ }
+ else if(coll instanceof String){
+   final String s = (String) coll;
+   return new Iterator(){
+     int i = 0;
+
+     public boolean hasNext(){
+       return i < s.length();
+     }
+
+     public Object next(){
+       return s.charAt(i++);
+     }
+
+     public void remove(){
+       throw new UnsupportedOperationException();
+     }
+   };
+ }
+ else if(coll.getClass().isArray()){
+   return ArrayIter.createFromObject(coll);
+ }else
+   return iter(seq(coll));
+}
+
 static public Object seqOrElse(Object o) {
 	return seq(o) == null ? null : o;
 }
@@ -948,8 +994,8 @@ static public Object nth(Object coll, int n, Object notFound){
         else
           loadResourceScript(RT.class, cljfile);
       } else if (!loaded && failIfNotFound)
-        throw new FileNotFoundException(String.format(
-            "Could not locate %s or %s on classpath: ", classfile, cljfile));
+        throw new FileNotFoundException(String.format("Could not locate %s or %s on classpath.%s", classfile, cljfile,
+                scriptbase.contains("_") ? " Please check that namespaces with dashes use underscores in the Clojure file name." : ""));
     }
   }
 
@@ -2210,7 +2256,7 @@ static public InputStream resourceAsStream(ClassLoader loader, String name){
     }
   }
 
-  static Class classForNameNonLoading(String name) {
+  static public Class classForNameNonLoading(String name) {
     try {
       return Class.forName(name, false, baseLoader());
     } catch (ClassNotFoundException e) {
