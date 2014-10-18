@@ -40,12 +40,12 @@ A clojure compiler that targets objc runtimes.
 ## ObjC interop
 
     (defn say-hi [name]
-      ($ ($ ($ ($ ($ UIAlertView) :alloc)
+        ($ ($ ($ ($ UIAlertView) :alloc)
              :initWithTitle (str "Hello " name)
              :message "Hi! from clojure"
              :delegate nil
              :cancelButtonTitle "Cancelar"
-             :otherButtonTitles nil) :show) :autorelease))
+             :otherButtonTitles nil) :show))
  
 ## Discuss
  
