@@ -53,7 +53,7 @@ A clojure compiler that targets objc runtimes.
  
 ## How to build dist
  
- ./build.sh
+ lein exec build.clj
 
 ## License
 
