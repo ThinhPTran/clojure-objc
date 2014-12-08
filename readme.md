@@ -4,21 +4,7 @@ WARNING! THIS IS AN ALPHA RELEASE
 
 A clojure compiler that targets objc runtimes.
 
-## Downloads
-
-### Download clojure-objc 1.5.1-1 static lib and headers
-  
-  [clojure-objc-1.5.1-1](https://www.dropbox.com/s/19r4n24lu8t4utv/clojure-objc-1.5.1-1.zip)
-  
-## Dependency
- 
-    [galdolber/clojure-objc "1.5.1-1"]
-  
-### Download j2objc 0.8.8 with arm64 support (not available in official site)
-
-  [j2objc 0.8.8](https://docs.google.com/file/d/0B34oZK3UpQolb1UzcGt5cFcxbXM/edit)
-
-## Where to start
+## Leiningen plugin
  
  https://github.com/galdolber/lein-objcbuild
 
