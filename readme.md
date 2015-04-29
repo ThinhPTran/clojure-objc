@@ -33,6 +33,10 @@ A clojure compiler that targets objc runtimes.
              :cancelButtonTitle "Cancelar"
              :otherButtonTitles nil) :show))
  
+## Presentations
+
+http://www.slideshare.net/GalDolber/clojureobjc-47500127
+ 
 ## Discuss
  
  https://groups.google.com/d/forum/clojure-objc-discuss
