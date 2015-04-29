@@ -58,7 +58,7 @@
     }\
     id retType = [ClojureLangRT firstWithId:types]; \
     IOSObjectArray *typesa = [ClojureLangRT toArrayWithId:[ClojureLangRT nextWithId:types]]; \
-    long c = [typesa count]; \
+    long c = [typesa length]; \
     void **args = (void **) malloc ((c + 1) * sizeof(void *)); \
     for (int n = 0; n < c; n++) { \
         switch (to_char([typesa objectAtIndex:n])) { \

@@ -3,8 +3,8 @@
 (require '[clojure.string :as st])
 (import '[java.io File])
 
-(def iphone-os-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.0.sdk")
-(def iphone-simulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator8.0.sdk")
+(def iphone-os-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk")
+(def iphone-simulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk")
 (def frameworks "-framework UIKit -framework Foundation")
 (def opts "-g -miphoneos-version-min=6.1 -fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -O3 -DDEBUG=1 -Wno-unsequenced")
 

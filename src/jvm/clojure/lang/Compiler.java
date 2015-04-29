@@ -44,6 +44,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.j2objc.annotations.ReflectionSupport.Level;
+
 import clojure.asm.Attribute;
 import clojure.asm.ByteVector;
 import clojure.asm.ClassVisitor;
@@ -4690,6 +4692,7 @@ public class Compiler implements Opcodes {
       }
       addAnnotation(cv, classMeta);
 
+      emitSource("@com.google.j2objc.annotations.ReflectionSupport(com.google.j2objc.annotations.ReflectionSupport.Level.NATIVE_ONLY)");
       emitSource("public final class " + className + " extends "
           + superName.replaceAll("/", ".")
           + (interfaces.length() > 0 ? " implements " : "") + interfaces + " {");
@@ -8174,6 +8177,7 @@ public class Compiler implements Opcodes {
       emitSource();
       emitSource("import clojure.lang.*;");
       emitSource();
+      emitSource("@com.google.j2objc.annotations.ReflectionSupport(com.google.j2objc.annotations.ReflectionSupport.Level.NATIVE_ONLY)");
       emitSource("public class " + className + " {");
       tab();
 
@@ -8568,6 +8572,7 @@ public class Compiler implements Opcodes {
         sb.append(i.replaceAll("/", "."));
       }
 
+      emitSource("@com.google.j2objc.annotations.ReflectionSupport(com.google.j2objc.annotations.ReflectionSupport.Level.NATIVE_ONLY)");
       emitSource("public class " + className + " extends "
           + superName.replaceAll("/", ".")
           + (sb.length() > 0 ? " implements " + sb.toString() : "") + " {");

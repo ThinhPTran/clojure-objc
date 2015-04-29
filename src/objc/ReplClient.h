@@ -10,7 +10,7 @@
 
 @interface ReplClient : NSObject
 
-+(void) connect: (NSString*) host port:(NSString*) port;
++(void) connect: (NSString*) host;
 +(id) callRemote:(id)sel args:(id)args;
 
 @end
