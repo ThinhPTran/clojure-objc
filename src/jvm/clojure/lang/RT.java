@@ -33,6 +33,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -219,6 +220,7 @@ public class RT {
       Symbol.intern("*default-data-reader-fn*"), RT.map()).setDynamic();
   final static public Var DEFAULT_DATA_READERS = Var.intern(CLOJURE_NS,
       Symbol.intern("default-data-readers"), RT.map());
+  final static public Var SUPPRESS_READ = Var.intern(CLOJURE_NS, Symbol.intern("*suppress-read*"), null).setDynamic();
   final static public Var ASSERT = Var.intern(CLOJURE_NS,
       Symbol.intern("*assert*"), T).setDynamic();
   final static public Var MATH_CONTEXT = Var.intern(CLOJURE_NS,
@@ -550,6 +552,22 @@ public static void loadLibrary(String libname){
 
 ////////////// Collections support /////////////////////////////////
 
+private static final int CHUNK_SIZE = 32;
+public static ISeq chunkIteratorSeq(final Iterator iter){
+    if(iter.hasNext()) {
+        return new LazySeq(new AFn() {
+            public Object invoke() {
+                Object[] arr = new Object[CHUNK_SIZE];
+                int n = 0;
+                while(iter.hasNext() && n < CHUNK_SIZE)
+                    arr[n++] = iter.next();
+                return new ChunkedCons(new ArrayChunk(arr, 0, n), chunkIteratorSeq(iter));
+            }
+        });
+    }
+    return null;
+}
+
 static public ISeq seq(Object coll){
 	if(coll instanceof ASeq)
 		return (ASeq) coll;
@@ -565,7 +583,7 @@ static ISeq seqFrom(Object coll){
 	else if(coll == null)
 		return null;
 	else if(coll instanceof Iterable)
-		return IteratorSeq.create(((Iterable) coll).iterator());
+		return chunkIteratorSeq(((Iterable) coll).iterator());
 	else if(coll.getClass().isArray())
 		return ArraySeq.createFromObject(coll);
 	else if(coll instanceof CharSequence)
@@ -628,11 +646,17 @@ static public Object seqOrElse(Object o) {
 }
 
 static public ISeq keys(Object coll){
-	return APersistentMap.KeySeq.create(seq(coll));
+  if(coll instanceof IPersistentMap)
+    return APersistentMap.KeySeq.createFromMap((IPersistentMap)coll);
+  else
+    return APersistentMap.KeySeq.create(seq(coll));
 }
 
 static public ISeq vals(Object coll){
-	return APersistentMap.ValSeq.create(seq(coll));
+  if(coll instanceof IPersistentMap)
+    return APersistentMap.ValSeq.createFromMap((IPersistentMap)coll);
+  else
+    return APersistentMap.ValSeq.create(seq(coll));
 }
 
 static public IPersistentMap meta(Object x){
@@ -667,6 +691,8 @@ static int countFrom(Object o){
 		return ((Collection) o).size();
 	else if(o instanceof Map)
 		return ((Map) o).size();
+	else if (o instanceof Map.Entry)
+	  return 2;
 	else if(o.getClass().isArray())
 		return Array.getLength(o);
 
@@ -963,13 +989,18 @@ static public Object nth(Object coll, int n, Object notFound){
     } else {
       String classfile = scriptbase + LOADER_SUFFIX + ".class";
       String cljfile = scriptbase + ".clj";
+      String scriptfile = cljfile;
       URL classURL = getResource(baseLoader(), classfile);
-      URL cljURL = getResource(baseLoader(), cljfile);
+      URL cljURL = getResource(baseLoader(), scriptfile);
+      if(cljURL == null) {
+        scriptfile = scriptbase + ".cljc";
+        cljURL = getResource(baseLoader(), scriptfile);
+      }  
       boolean loaded = false;
 
       if (forceClass
           || (classURL != null && (cljURL == null || lastModified(classURL,
-              classfile) >= lastModified(cljURL, cljfile)))) { // || classURL ==
+              classfile) >= lastModified(cljURL, scriptfile)))) { // || classURL ==
                                                                // null ?
         try {
           Var.pushThreadBindings(RT.mapUniqueKeys(CURRENT_NS,
@@ -990,9 +1021,9 @@ static public Object nth(Object coll, int n, Object notFound){
       if ((!loaded && cljURL != null)) {
         // System.out.println("Loading script " + scriptbase);
         if (booleanCast(Compiler.COMPILE_FILES.deref()))
-          compile(cljfile);
+          compile(scriptfile);
         else
-          loadResourceScript(RT.class, cljfile);
+          loadResourceScript(RT.class, scriptfile);
       } else if (!loaded && failIfNotFound)
         throw new FileNotFoundException(String.format("Could not locate %s or %s on classpath.%s", classfile, cljfile,
                 scriptbase.contains("_") ? " Please check that namespaces with dashes use underscores in the Clojure file name." : ""));
@@ -1753,7 +1784,12 @@ static public Object nth(Object coll, int n, Object notFound){
       return (Object[]) coll;
     else if (coll instanceof Collection)
       return ((Collection) coll).toArray();
-    else if (coll instanceof Map)
+    else if(coll instanceof Iterable) {
+      ArrayList ret = new ArrayList();
+      for(Object o : (Iterable)coll)
+        ret.add(o);
+      return ret.toArray();
+    } else if (coll instanceof Map)
       return ((Map) coll).entrySet().toArray();
     else if (coll instanceof String) {
       char[] chars = ((String) coll).toCharArray();
@@ -1907,8 +1943,7 @@ static public String resolveClassNameInContext(String className){
 }
 
 static public boolean suppressRead(){
-	//todo - look up in suppress-read var
-	return false;
+  return booleanCast(SUPPRESS_READ.deref());
 }
 
 static public String printString(Object x){
@@ -1923,8 +1958,12 @@ static public String printString(Object x){
 }
 
 static public Object readString(String s){
-	PushbackReader r = new PushbackReader(new StringReader(s));
-	return LispReader.read(r, true, null, false);
+  return readString(s, null);
+}
+
+static public Object readString(String s, Object opts) {
+  PushbackReader r = new PushbackReader(new StringReader(s));
+  return LispReader.read(r, opts);
 }
 
 static public void print(Object x, Writer w) throws IOException{
@@ -2248,30 +2287,37 @@ static public InputStream resourceAsStream(ClassLoader loader, String name){
     }
   }
 
-  static public Class classForName(String name) {
+  static public Class classForName(String name, boolean load, ClassLoader loader) {
     try {
-      return Class.forName(name, true, baseLoader());
-    } catch (ClassNotFoundException e) {
-      throw Util.sneakyThrow(e);
-    }
-  }
-
-  static public Class classForNameNonLoading(String name) {
-    try {
-      return Class.forName(name, false, baseLoader());
+      Class c = null;
+      if (!(loader instanceof DynamicClassLoader))
+        c = DynamicClassLoader.findInMemoryClass(name);
+      if (c != null)
+        return c;
+      return Class.forName(name, load, loader);
     } catch (ClassNotFoundException e) {
       throw Util.sneakyThrow(e);
     }
   }
   
-  static public Class loadClassForName(String name)
-      throws ClassNotFoundException {
+  static public Class classForName(String name) {
+    return classForName(name, true, baseLoader());
+  }
+
+  static public Class classForNameNonLoading(String name) {
+    return classForName(name, false, baseLoader());
+  }
+  
+  static public Class loadClassForName(String name){
     try {
-      Class.forName(name, false, baseLoader());
-    } catch (ClassNotFoundException e) {
-      return null;
+      classForNameNonLoading(name);
+    } catch (Exception e) {
+      if (e instanceof ClassNotFoundException)
+        return null;
+      else
+        throw Util.sneakyThrow(e);
     }
-    return Class.forName(name, true, baseLoader());
+    return classForName(name);
   }
 
   static public float aget(float[] xs, int i) {

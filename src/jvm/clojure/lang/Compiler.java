@@ -167,7 +167,7 @@ public class Compiler implements Opcodes {
   private static final Type OBJECT_TYPE;
   // private static final Type KEYWORD_TYPE = Type.getType(Keyword.class);
   private static final Type VAR_TYPE = Type.getType(Var.class);
-  // private static final Type SYMBOL_TYPE = Type.getType(Symbol.class);
+  private static final Type SYMBOL_TYPE = Type.getType(Symbol.class);
   // private static final Type NUM_TYPE = Type.getType(Num.class);
   private static final Type IFN_TYPE = Type.getType(IFn.class);
   // private static final Type AFUNCTION_TYPE = Type.getType(AFunction.class);
@@ -509,6 +509,7 @@ public class Compiler implements Opcodes {
     public final boolean initProvided;
     public final boolean emitOnInit;
     public final boolean isDynamic;
+    public final boolean shadowsCoreMapping;
     public final String source;
     public final int line;
     public final int column;
@@ -522,10 +523,11 @@ public class Compiler implements Opcodes {
         .getMethod("clojure.lang.Var setDynamic(boolean)");
     final static Method symintern = Method
         .getMethod("clojure.lang.Symbol intern(String, String)");
-
+    final static Method internVar = Method.getMethod("clojure.lang.Var refer(clojure.lang.Symbol, clojure.lang.Var)");
+    
     public DefExpr(C c, String source, int line, int column, Var var,
         Expr init, Expr meta, boolean initProvided, boolean isDynamic,
-        boolean isDeclared) {
+        boolean shadowsCoreMapping, boolean isDeclared) {
       this.source = source;
       this.line = line;
       this.column = column;
@@ -533,6 +535,7 @@ public class Compiler implements Opcodes {
       this.init = init;
       this.meta = meta;
       this.isDynamic = isDynamic;
+      this.shadowsCoreMapping = shadowsCoreMapping;
       this.initProvided = initProvided;
       this.emitOnInit = (C.RETURN == c || C.EXPRESSION == c)
           || (!isDeclared && !(init instanceof FnExpr));
@@ -571,6 +574,17 @@ public class Compiler implements Opcodes {
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
       if (emitOnInit) {
         String constant = objx.emitVar(gen, var);
+        // TODO emit sources
+        if (shadowsCoreMapping)
+        {
+          gen.dup();
+          gen.getField(VAR_TYPE, "ns", NS_TYPE);
+          gen.swap();
+          gen.dup();
+          gen.getField(VAR_TYPE, "sym", SYMBOL_TYPE);
+          gen.swap();
+          gen.invokeVirtual(NS_TYPE, internVar);
+        }
         if (isDynamic) {
           gen.push(isDynamic);
           gen.invokeVirtual(VAR_TYPE, setDynamicMethod);
@@ -636,9 +650,11 @@ public class Compiler implements Opcodes {
         if (v == null)
           throw Util
               .runtimeException("Can't refer to qualified var that doesn't exist");
+        boolean shadowsCoreMapping = false;
         if (!v.ns.equals(currentNS())) {
           if (sym.ns == null) {
             v = currentNS().intern(sym);
+            shadowsCoreMapping = true;
             registerVar(v);
           }
           // throw Util.runtimeException("Name conflict, can't def " + sym +
@@ -701,7 +717,7 @@ public class Compiler implements Opcodes {
               : C.EXPRESSION, mm);
         }
         return new DefExpr(context, (String) SOURCE.deref(), lineDeref(),
-            columnDeref(), v, init, meta, RT.count(form) == 3, isDynamic,
+            columnDeref(), v, init, meta, RT.count(form) == 3, isDynamic, shadowsCoreMapping,
             isDeclared);
       }
     }
@@ -1196,6 +1212,8 @@ public class Compiler implements Opcodes {
             Object o = currentNS().getMapping(sym);
             if (o instanceof Class)
               c = (Class) o;
+            else if(LOCAL_ENV.deref() != null && ((java.util.Map)LOCAL_ENV.deref()).containsKey(form))
+              return null;
             else {
               try {
                 c = RT.classForName(sym.name);
@@ -1222,7 +1240,7 @@ public class Compiler implements Opcodes {
      * return className; }
      */
     static Class tagToClass(Object tag) {
-      Class c = maybeClass(tag, true);
+      Class c = null;
       if (tag instanceof Symbol) {
         Symbol sym = (Symbol) tag;
         if (sym.ns == null) // if ns-qualified can't be classname
@@ -1263,6 +1281,8 @@ public class Compiler implements Opcodes {
             c = Boolean.TYPE;
         }
       }
+      if(c == null)
+        c = maybeClass(tag, true);
       if (c != null)
         return c;
       throw new IllegalArgumentException("Unable to resolve classname: " + tag);
@@ -1332,9 +1352,9 @@ public class Compiler implements Opcodes {
     }
 
     public String emitUnboxed(C context, ObjExpr objx, GeneratorAdapter gen) {
-      gen.visitLineNumber(line, gen.mark());
       if (targetClass != null && field != null) {
         String value = target.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.checkCast(getType(targetClass));
         gen.getField(getType(targetClass), fieldName,
             Type.getType(field.getType()));
@@ -1346,9 +1366,9 @@ public class Compiler implements Opcodes {
     }
 
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
-      gen.visitLineNumber(line, gen.mark());
       if (targetClass != null && field != null) {
         String value = target.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.checkCast(getType(targetClass));
         gen.getField(getType(targetClass), fieldName,
             Type.getType(field.getType()));
@@ -1364,6 +1384,7 @@ public class Compiler implements Opcodes {
         }
       } else {
         String t = target.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.push(fieldName);
         gen.push(requireField);
         gen.invokeStatic(REFLECTOR_TYPE, invokeNoArgInstanceMember);
@@ -1389,10 +1410,10 @@ public class Compiler implements Opcodes {
 
     public String emitAssign(C context, ObjExpr objx, GeneratorAdapter gen,
         Expr val) {
-      gen.visitLineNumber(line, gen.mark());
       String ret;
       if (targetClass != null && field != null) {
         String t = target.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.checkCast(Type.getType(targetClass));
         String value = val.emit(C.EXPRESSION, objx, gen);
         gen.dupX1();
@@ -1407,6 +1428,7 @@ public class Compiler implements Opcodes {
         target.emit(C.EXPRESSION, objx, gen);
         gen.push(fieldName);
         val.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.invokeStatic(REFLECTOR_TYPE, setInstanceFieldMethod);
         throw new RuntimeException("Reflection not allowed");
       }
@@ -1498,8 +1520,8 @@ public class Compiler implements Opcodes {
 
     public String emitAssign(C context, ObjExpr objx, GeneratorAdapter gen,
         Expr val) {
-      gen.visitLineNumber(line, gen.mark());
       String value = val.emit(C.EXPRESSION, objx, gen);
+      gen.visitLineNumber(line, gen.mark());
       gen.dup();
       emitSource(printClass(c) + "." + fieldName + " = ("
           + printClass(field.getType()) + ")" + value + ";");
@@ -1723,7 +1745,6 @@ public class Compiler implements Opcodes {
     }
 
     public String emitUnboxed(C context, ObjExpr objx, GeneratorAdapter gen) {
-      gen.visitLineNumber(line, gen.mark());
       if (method != null) {
         Type type = Type.getType(method.getDeclaringClass());
         String first = target.emit(C.EXPRESSION, objx, gen);
@@ -1731,6 +1752,7 @@ public class Compiler implements Opcodes {
         gen.checkCast(type);
         String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
             gen, method.getParameterTypes(), args));
+        gen.visitLineNumber(line, gen.mark());
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -1750,7 +1772,6 @@ public class Compiler implements Opcodes {
 
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
       String ret = null;
-      gen.visitLineNumber(line, gen.mark());
       if (method != null) {
         Type type = Type.getType(method.getDeclaringClass());
         String val = target.emit(C.EXPRESSION, objx, gen);
@@ -1758,6 +1779,7 @@ public class Compiler implements Opcodes {
         gen.checkCast(type);
         String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
             gen, method.getParameterTypes(), args));
+        gen.visitLineNumber(line, gen.mark());
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -1784,6 +1806,7 @@ public class Compiler implements Opcodes {
         String t = target.emit(C.EXPRESSION, objx, gen);
         gen.push(methodName);
         String argsList = emitArgsAsArray(args, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -1822,7 +1845,7 @@ public class Compiler implements Opcodes {
     public final java.lang.reflect.Method method;
     public final Symbol tag;
     final static Method forNameMethod = Method
-        .getMethod("Class forName(String)");
+        .getMethod("Class classForName(String)");
     final static Method invokeStaticMethodMethod = Method
         .getMethod("Object invokeStaticMethod(Class,String,Object[])");
     final static Keyword warnOnBoxedKeyword = Keyword.intern("warn-on-boxed");
@@ -1960,10 +1983,10 @@ public class Compiler implements Opcodes {
     }
 
     public String emitUnboxed(C context, ObjExpr objx, GeneratorAdapter gen) {
-      gen.visitLineNumber(line, gen.mark());
       if (method != null) {
         List<String> argsList = MethodExpr.emitTypedArgs(objx, gen,
             method.getParameterTypes(), args);
+        gen.visitLineNumber(line, gen.mark());
         // Type type = Type.getObjectType(className.replace('.', '/'));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -2006,10 +2029,10 @@ public class Compiler implements Opcodes {
     }
 
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
-      gen.visitLineNumber(line, gen.mark());
       if (method != null) {
         String argsList = MethodExpr.combineArgs(MethodExpr.emitTypedArgs(objx,
             gen, method.getParameterTypes(), args));
+        gen.visitLineNumber(line, gen.mark());
         // Type type = Type.getObjectType(className.replace('.', '/'));
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -2033,10 +2056,12 @@ public class Compiler implements Opcodes {
         }
         return wrap(context, v);
       } else {
+        gen.visitLineNumber(line, gen.mark());
         gen.push(c.getName());
-        gen.invokeStatic(CLASS_TYPE, forNameMethod);
+        gen.invokeStatic(RT_TYPE, forNameMethod);
         gen.push(methodName);
         String argsList = emitArgsAsArray(args, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
           method.emitClearLocals(gen);
@@ -2804,10 +2829,8 @@ public class Compiler implements Opcodes {
     public final Class c;
     final static Method invokeConstructorMethod = Method
         .getMethod("Object invokeConstructor(Class,Object[])");
-    // final static Method forNameMethod =
-    // Method.getMethod("Class classForName(String)");
     final static Method forNameMethod = Method
-        .getMethod("Class forName(String)");
+        .getMethod("Class classForName(String)");
 
     public NewExpr(Class c, IPersistentVector args, int line, int column) {
       this.args = args;
@@ -2886,7 +2909,7 @@ public class Compiler implements Opcodes {
         val = "new " + canonicalName + "(" + argsList + ")";
       } else {
         gen.push(destubClassName(c.getName()));
-        gen.invokeStatic(CLASS_TYPE, forNameMethod);
+        gen.invokeStatic(RT_TYPE, forNameMethod);
         String argsList = MethodExpr.emitArgsAsArray(args, objx, gen);
         if (context == C.RETURN) {
           ObjMethod method = (ObjMethod) METHOD.deref();
@@ -3251,7 +3274,7 @@ public class Compiler implements Opcodes {
       Expr arg = (Expr) args.nth(i);
       if (i > 0)
         sb.append(", ");
-      sb.append(arg.hasJavaClass() ? arg.getJavaClass().getName() : "unknown");
+      sb.append((arg.hasJavaClass() && arg.getJavaClass() != null) ? arg.getJavaClass().getName() : "unknown");
     }
     return sb.toString();
   }
@@ -3441,7 +3464,7 @@ public class Compiler implements Opcodes {
         if (!allConstantKeysUnique)
           throw new IllegalArgumentException("Duplicate constant keys in map");
         if (valsConstant) {
-          IPersistentMap m = PersistentHashMap.EMPTY;
+          IPersistentMap m = PersistentArrayMap.EMPTY;
           for (int i = 0; i < keyvals.length(); i += 2) {
             m = m.assoc(((LiteralExpr) keyvals.nth(i)).val(),
                 ((LiteralExpr) keyvals.nth(i + 1)).val());
@@ -3623,6 +3646,7 @@ public class Compiler implements Opcodes {
       gen.dup(); // thunk, thunk
       // String val = registerTemp();
       String tar = target.emit(C.EXPRESSION, objx, gen);
+      gen.visitLineNumber(line, gen.mark());
       // emitSource("Object " + val + " = " + tar + ";"); // thunk,thunk,target
       gen.dupX2(); // target,thunk,thunk,target
       gen.invokeInterface(ObjExpr.ILOOKUP_THUNK_TYPE,
@@ -4033,11 +4057,12 @@ public class Compiler implements Opcodes {
 
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
       String ret;
-      gen.visitLineNumber(line, gen.mark());
       if (isProtocol) {
+        gen.visitLineNumber(line, gen.mark());
         ret = emitProto(context, objx, gen);
       } else {
         String val = fexpr.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.checkCast(IFN_TYPE);
         ret = wrap(
             context,
@@ -4158,7 +4183,7 @@ public class Compiler implements Opcodes {
         }
         sb.append(", " + MethodExpr.emitArgsAsArray(restArgs, objx, gen));
       }
-
+      gen.visitLineNumber(line, gen.mark());
       if (context == C.RETURN) {
         ObjMethod method = (ObjMethod) METHOD.deref();
         method.emitClearLocals(gen);
@@ -4324,6 +4349,31 @@ public class Compiler implements Opcodes {
           + RT.nextID()
           : ""))
           : ("fn" + "__" + RT.nextID());
+      
+      /*Fix CLJ-1330
+         String basename = (enclosingMethod != null ?
+          enclosingMethod.objx.name
+          : (munge(currentNS().name.name))) + "$";
+          
+      Symbol nm = null;
+          
+      if(RT.second(form) instanceof Symbol) {
+        nm = (Symbol) RT.second(form);
+        name = nm.name + "__" + RT.nextID();
+      } else {
+        if(name == null)
+          name = "fn__" + RT.nextID();
+        else if (enclosingMethod != null)
+          name += "__" + RT.nextID();
+      }
+      
+      String simpleName = munge(name).replace(".", "_DOT_");
+      
+  -     if(RT.second(form) instanceof Symbol)
+  +     if(nm != null)
+        {
+  -       Symbol nm = (Symbol) RT.second(form);
+      */
       fn.name = basename + simpleName;
       fn.internalName = fn.name.replace('.', '/');
       fn.objtype = Type.getObjectType(fn.internalName);
@@ -5249,8 +5299,7 @@ public class Compiler implements Opcodes {
             gen.getStatic(bt, "TYPE", Type.getType(Class.class));
           } else {
             gen.push(destubClassName(cc.getName()));
-            gen.invokeStatic(Type.getType(Class.class),
-                Method.getMethod("Class forName(String)"));
+            gen.invokeStatic(RT_TYPE, Method.getMethod("Class classForName(String)"));
           }
           str = printClass(cc) + ".class";
         } else if (value instanceof Symbol) {
@@ -7988,11 +8037,27 @@ public class Compiler implements Opcodes {
     return load(rdr, null, "NO_SOURCE_FILE");
   }
 
+  static void consumeWhitespaces(LineNumberingPushbackReader pushbackReader) {
+    int ch = LispReader.read1(pushbackReader);
+    while(LispReader.isWhitespace(ch))
+      ch = LispReader.read1(pushbackReader);
+    LispReader.unread(pushbackReader, ch);
+  }
+  
+  private static final Object OPTS_COND_ALLOWED = RT.mapUniqueKeys(LispReader.OPT_READ_COND, LispReader.COND_ALLOW);
+  private static Object readerOpts(String sourceName) {
+      if(sourceName != null && sourceName.endsWith(".cljc"))
+          return OPTS_COND_ALLOWED;
+      else
+          return null;
+  }
+  
   public static Object load(Reader rdr, String sourcePath, String sourceName) {
     Object EOF = new Object();
     Object ret = null;
     LineNumberingPushbackReader pushbackReader = (rdr instanceof LineNumberingPushbackReader) ? (LineNumberingPushbackReader) rdr
         : new LineNumberingPushbackReader(rdr);
+    consumeWhitespaces(pushbackReader);
     Var.pushThreadBindings(RT.mapUniqueKeys(LOADER, RT.makeClassLoader(),
         SOURCE_PATH, sourcePath, SOURCE, sourceName, METHOD, null, LOCAL_ENV,
         null, LOOP_LOCALS, null, NEXT_LOCAL_NUM, 0, RT.READEVAL, RT.T,
@@ -8003,10 +8068,11 @@ public class Compiler implements Opcodes {
         pushbackReader.getColumnNumber(), RT.UNCHECKED_MATH,
         RT.UNCHECKED_MATH.deref(), RT.WARN_ON_REFLECTION,
         RT.WARN_ON_REFLECTION.deref(), RT.DATA_READERS, RT.DATA_READERS.deref()));
-
+    Object readerOpts = readerOpts(sourceName);
     try {
-      for (Object r = LispReader.read(pushbackReader, false, EOF, false); r != EOF; r = LispReader
-          .read(pushbackReader, false, EOF, false)) {
+      for (Object r = LispReader.read(pushbackReader, false, EOF, false, readerOpts); r != EOF; r = LispReader
+          .read(pushbackReader, false, EOF, false, readerOpts)) {
+        consumeWhitespaces(pushbackReader);
         LINE_AFTER.set(pushbackReader.getLineNumber());
         COLUMN_AFTER.set(pushbackReader.getColumnNumber());
         ret = eval(r, false);
@@ -8190,9 +8256,9 @@ public class Compiler implements Opcodes {
           Method.getMethod("void load ()"), null, null, cv);
       tab();
       gen.visitCode();
-
-      for (Object r = LispReader.read(pushbackReader, false, EOF, false); r != EOF; r = LispReader
-          .read(pushbackReader, false, EOF, false)) {
+      Object readerOpts = readerOpts(sourceName);
+      for (Object r = LispReader.read(pushbackReader, false, EOF, false, readerOpts); r != EOF; r = LispReader
+          .read(pushbackReader, false, EOF, false, readerOpts)) {
         LINE_AFTER.set(pushbackReader.getLineNumber());
         COLUMN_AFTER.set(pushbackReader.getColumnNumber());
         compile1(gen, objx, r);
@@ -8279,8 +8345,8 @@ public class Compiler implements Opcodes {
 
       String iname = objx.internalName.replace('/', '.');
       clinitgen.push(iname);
-      clinitgen.invokeStatic(CLASS_TYPE,
-          Method.getMethod("Class forName(String)"));
+      clinitgen.invokeStatic(RT_TYPE,
+          Method.getMethod("Class classForName(String)"));
       clinitgen.invokeVirtual(CLASS_TYPE,
           Method.getMethod("ClassLoader getClassLoader()"));
       clinitgen.invokeStatic(Type.getType(Compiler.class),
@@ -9710,7 +9776,7 @@ public class Compiler implements Opcodes {
         if (context == C.EVAL)
           return analyze(context,
               RT.list(RT.list(FNONCE, PersistentVector.EMPTY, form)));
-        PersistentVector args = PersistentVector.create(form.next());
+        IPersistentVector args = LazilyPersistentVector.create(form.next());
 
         Object exprForm = args.nth(0);
         int shift = ((Number) args.nth(1)).intValue();

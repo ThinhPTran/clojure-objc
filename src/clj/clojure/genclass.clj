@@ -25,8 +25,8 @@
             (loop [mm mm
                    considered considered
                    meths (seq (concat
-                               (seq (. c (getDeclaredMethods)))
-                               (seq (. c (getMethods)))))]
+                                (seq (. c (getDeclaredMethods)))
+                                (seq (. c (getMethods)))))]
               (if meths
                 (let [^java.lang.reflect.Method meth (first meths)
                       mods (. meth (getModifiers))
@@ -62,12 +62,12 @@
     (apply vector (. ctor (getParameterTypes)))))
 
 (defn- escape-class-name [^Class c]
-  (.. (.getSimpleName c)
+  (.. (.getSimpleName c) 
       (replace "[]" "<>")))
 
 (defn- overload-name [mname pclasses]
   (if (seq pclasses)
-    (apply str mname (interleave (repeat \-)
+    (apply str mname (interleave (repeat \-) 
                                  (map escape-class-name pclasses)))
     (str mname "-void")))
 
@@ -83,30 +83,30 @@
 ;(distinct (map first(keys (mapcat non-private-methods [Object IPersistentMap]))))
 
 (def ^{:private true} prim->class
-  {'int Integer/TYPE
-   'ints (Class/forName "[I")
-   'long Long/TYPE
-   'longs (Class/forName "[J")
-   'float Float/TYPE
-   'floats (Class/forName "[F")
-   'double Double/TYPE
-   'doubles (Class/forName "[D")
-   'void Void/TYPE
-   'short Short/TYPE
-   'shorts (Class/forName "[S")
-   'boolean Boolean/TYPE
-   'booleans (Class/forName "[Z")
-   'byte Byte/TYPE
-   'bytes (Class/forName "[B")
-   'char Character/TYPE
-   'chars (Class/forName "[C")})
+     {'int Integer/TYPE
+      'ints (Class/forName "[I")
+      'long Long/TYPE
+      'longs (Class/forName "[J")
+      'float Float/TYPE
+      'floats (Class/forName "[F")
+      'double Double/TYPE
+      'doubles (Class/forName "[D")
+      'void Void/TYPE
+      'short Short/TYPE
+      'shorts (Class/forName "[S")
+      'boolean Boolean/TYPE
+      'booleans (Class/forName "[Z")
+      'byte Byte/TYPE
+      'bytes (Class/forName "[B")
+      'char Character/TYPE
+      'chars (Class/forName "[C")})
 
-(defn- ^Class the-class [x]
-  (cond
+(defn- ^Class the-class [x] 
+  (cond 
    (class? x) x
    (contains? prim->class x) (prim->class x)
    :else (let [strx (str x)]
-           (clojure.lang.RT/classForName
+           (clojure.lang.RT/classForName 
             (if (some #{\. \[} strx)
               strx
               (str "java.lang." strx))))))
@@ -124,9 +124,9 @@
 (defn- generate-class [options-map]
   (validate-generate-class-options options-map)
   (let [default-options {:prefix "-" :load-impl-ns true :impl-ns (ns-name *ns*)}
-        {:keys [name extends implements constructors methods main factory state init exposes
-                exposes-methods prefix load-impl-ns impl-ns post-init]}
-        (merge default-options options-map)
+        {:keys [name extends implements constructors methods main factory state init exposes 
+                exposes-methods prefix load-impl-ns impl-ns post-init]} 
+          (merge default-options options-map)
         name-meta (meta name)
         name (str name)
         package-name (subs name 0 (.lastIndexOf name "."))
@@ -167,7 +167,7 @@
                                    (map (fn [[m p]] {(str m) [p]}) methods)))
         sigs-by-name (apply merge-with concat {} all-sigs)
         overloads (into1 {} (filter (fn [[m s]] (next s)) sigs-by-name))
-        var-fields (concat (when init [init-name])
+        var-fields (concat (when init [init-name]) 
                            (when post-init [post-init-name])
                            (when main [main-name])
                            ;(when exposes-methods (map str (vals exposes-methods)))
@@ -892,12 +892,12 @@
   {:added "1.0"}
 
   [& options]
-  (let [options-map (apply hash-map options)
-        [cname bytecode] (generate-interface options-map)]
-    (if *compile-files*
-      (Compiler/writeClassFile cname bytecode)
+    (let [options-map (apply hash-map options)
+          [cname bytecode] (generate-interface options-map)]
+      (when *compile-files*
+        (clojure.lang.Compiler/writeClassFile cname bytecode))
       (.defineClass ^DynamicClassLoader (deref clojure.lang.Compiler/LOADER)
-                    (str (:name options-map)) bytecode options))))
+                    (str (:name options-map)) bytecode options)))
 
 (comment
 
