@@ -33,7 +33,7 @@
         (macroexpand `(m0 1))))
   (is (thrown-with-msg? ArityException #"Wrong number of args \(2\) passed to"
         (macroexpand `(m1 1 2))))
-  (is (thrown-with-msg? ArityException #"\Q/f2:+><->!#%&*|b\E"
+  (is (thrown-with-msg? ArityException #"\Qerrors-f2:+><->!#%&*|b\E"
         (f2:+><->!#%&*|b 1 2))
         "ArityException messages should demunge function names"))
 
@@ -43,11 +43,11 @@
   
   ; would have used `are` here, but :line meta on &form doesn't survive successive macroexpansions
   (doseq [[msg-regex-str form] [["if-let .* in %s:\\d+" '(if-let [a 5
-                                                                 b 6]
-                                                          true nil)]
+                                                                  b 6]
+                                                           true nil)]
                                 ["let .* in %s:\\d+" '(let [a])] 
                                 ["let .* in %s:\\d+" '(let (a))]
-                                ["renamed-with-open .* in %s:\\d+" '(renamed-with-open [a])]]]
+                                #_["renamed-with-open .* in %s:\\d+" '(renamed-with-open [a])]]]
     (is (thrown-with-msg? clojure.lang.Compiler$CompilerException
                           (re-pattern (format msg-regex-str *ns*))
                           (macroexpand form)))))

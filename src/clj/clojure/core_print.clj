@@ -119,10 +119,12 @@
 (defmethod print-method clojure.lang.Keyword [o, ^Writer w]
   (.write w (str o)))
 
+(defmethod print-dup clojure.lang.Keyword [o w] (print-method o w))
+
 (defmethod print-method clojure.lang.Selector [^clojure.lang.Selector o, ^Writer w]
   (.write w (str "#sel \"" (. o sel) "\"")))
 
-(defmethod print-dup clojure.lang.Keyword [o w] (print-method o w))
+(defmethod print-dup clojure.lang.Selector [o w] (print-method o w))
 
 (defmethod print-method Number [o, ^Writer w]
   (.write w (str o)))

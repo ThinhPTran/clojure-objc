@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 
 import com.google.j2objc.annotations.ReflectionSupport.Level;
 
+import clojure.main;
 import clojure.asm.Attribute;
 import clojure.asm.ByteVector;
 import clojure.asm.ClassVisitor;
@@ -1414,9 +1415,9 @@ public class Compiler implements Opcodes {
       String ret;
       if (targetClass != null && field != null) {
         String t = target.emit(C.EXPRESSION, objx, gen);
-        gen.visitLineNumber(line, gen.mark());
         gen.checkCast(Type.getType(targetClass));
         String value = val.emit(C.EXPRESSION, objx, gen);
+        gen.visitLineNumber(line, gen.mark());
         gen.dupX1();
         emitSource("((" + printClass(targetClass) + ")" + t + ")." + fieldName
             + " = (" + printClass(field.getType()) + ")" + value + ";");
@@ -1426,12 +1427,12 @@ public class Compiler implements Opcodes {
             Type.getType(field.getType()));
         ret = wrap(context, v);
       } else {
-        target.emit(C.EXPRESSION, objx, gen);
+        String t = target.emit(C.EXPRESSION, objx, gen);
         gen.push(fieldName);
-        val.emit(C.EXPRESSION, objx, gen);
+        String e = val.emit(C.EXPRESSION, objx, gen);
         gen.visitLineNumber(line, gen.mark());
         gen.invokeStatic(REFLECTOR_TYPE, setInstanceFieldMethod);
-        throw new RuntimeException("Reflection not allowed");
+        ret = "Reflector.setInstanceField(" + t + ", " + fieldName + ", " + e + ")";
       }
       if (context == C.STATEMENT) {
         gen.pop();
@@ -3268,7 +3269,7 @@ public class Compiler implements Opcodes {
     sb.append(mungedName.substring(lastMatchEnd));
     return sb.toString();
   }
-
+  
   static String getTypeStringForArgs(IPersistentVector args) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < args.count(); i++) {
@@ -8082,6 +8083,11 @@ public class Compiler implements Opcodes {
       }
     } catch (LispReader.ReaderException e) {
       throw new CompilerException(sourcePath, e.line, e.column, e.getCause());
+    } catch (Throwable e) {
+      if(!(e instanceof CompilerException))
+        throw new CompilerException(sourcePath, (Integer) LINE_BEFORE.deref(), (Integer) COLUMN_BEFORE.deref(), e);
+      else
+        throw (CompilerException) e;
     } finally {
       Var.popThreadBindings();
     }

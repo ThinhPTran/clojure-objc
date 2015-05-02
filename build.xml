@@ -60,17 +60,18 @@
     	<arg value="clojure.string"/>
     	<arg value="clojure.data"/>
     	<arg value="clojure.remoterepl" />
-    	<!--arg value="clojure.xml"/>
-    	<arg value="clojure.zip"/>
-    	<arg value="clojure.walk"/>
-    	<arg value="clojure.template"/>
+    	
+    	<arg value="clojure.pprint"/>
     	<arg value="clojure.java.io"/>
+    	<arg value="clojure.test"/>
+    	<arg value="clojure.walk"/>
+    	<arg value="clojure.zip"/>
+    	<!--arg value="clojure.xml"/>
+    	<arg value="clojure.template"/>
     	<arg value="clojure.main"/>
     	<arg value="clojure.stacktrace"/>
-    	<arg value="clojure.test"/>
     	<arg value="clojure.test.tap"/>
     	<arg value="clojure.test.junit"/>
-    	<arg value="clojure.pprint"/>    	
       <arg value="clojure.inspector"/>
       <arg value="clojure.repl"/>
       <arg value="clojure.java.browse"/>

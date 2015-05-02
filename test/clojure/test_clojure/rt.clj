@@ -11,7 +11,7 @@
 (ns clojure.test-clojure.rt
   (:require clojure.set)
   (:use clojure.test clojure.test-helper))
-
+(comment
 (defn bare-rt-print
   "Return string RT would print prior to print-initialize"
   [x]
@@ -103,3 +103,4 @@
                    (.refer ns 'subset? #'clojure.set/intersection)))
       (is (nil? ('subset? (ns-publics ns))))
       (is (= #'clojure.set/subset? ('subset? (ns-refers ns)))))))
+)

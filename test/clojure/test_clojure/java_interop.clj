@@ -144,9 +144,10 @@
 
            (:class b) java.awt.Color ))))
 
+(comment
 (deftest test-iterable-bean
   (is (.iterator ^Iterable (bean (java.util.Date.))))
-  (is (hash (bean (java.util.Date.)))))
+  (is (hash (bean (java.util.Date.))))))
 
 ; proxy, proxy-super
 

@@ -11,7 +11,7 @@
 (when-not objc?
   (require '[clojure.walk :as walk]))
 
-(defmacro dispatch-main
+(defmacro ^{:added "1.6"} dispatch-main
   "Runs the body with dispatch_sync in the main queue
 
   dispatch_sync(dispatch_get_main_queue(), ^{
@@ -21,21 +21,21 @@
   `(clojure.lang.RT/dispatchInMainSync
     (fn [] ~@body)))
 
-(defn sel
+(defn ^{:added "1.6"} sel
   "Creates an objc selector.
 
   (sel \"some:selector:\")"
   [^String s]
   (clojure.lang.Selector. s))
 
-(defn objc-class
+(defn ^{:added "1.6"} objc-class
   "Lookup an objc class by name.
 
   (objc-class \"UIView\")"
   [s]
   (RT/objcClass (name s)))
 
-(defmacro $
+(defmacro ^{:added "1.6"} $
   "The objc interop macro. Use to lookup a class or to msgSend.
   
   [UIView class] -> ($ UIView)
@@ -57,7 +57,7 @@
           `(clojure.lang.Selector/invokeSelector ~selector ~t ~params)
           `(clojure.lang.Selector/invokeSelector ~selector ~t))))))
 
-(defmacro $$
+(defmacro ^{:added "1.6"} $$
   "Like $ but calls super.
   
   [super initWithFrame:frame] -> ($$ self :initWithFrame frame)
@@ -107,10 +107,10 @@
   [^clojure.lang.ObjCClass r, ^java.io.Writer w]
   (.write w (str "#objc-class \"" (.getName r) "\"")))
 
-(defn read-remote-ref [id]
+(defn ^{:added "1.6"} read-remote-ref [id]
   (.get (clojure.lang.RemoteRef. id)))
 
-(defn read-sel [name]
+(defn ^{:added "1.6"} read-sel [name]
   (clojure.lang.Selector. name))
 
 (alter-var-root #'*data-readers*
@@ -118,7 +118,7 @@
                                   'remote-ref #'read-remote-ref
                                   'objc-class #'objc-class})))
 
-(defn class->types
+(defn ^{:added "1.6"} class->types
   "Lookup a type for a class simple name"
   [c] 
   (case c
@@ -135,10 +135,10 @@
       (some #(if (= (val %) ($ ($ NSCommon) :signatureToType ($ c :objCType))) (key %)) objc-types)
       :id)))
 
-(defn types-for-vals [vals]
+(defn ^{:added "1.6"} types-for-vals [vals]
   (map (comp objc-types class->types keyword clojure.string/lower-case #(.getSimpleName %) class) vals))
 
-(defn ccall
+(defn ^{:added "1.6"} ccall
   "The c interop. To use a c function you need to register it in using:
   
   #import \"NSCommon.h\"
@@ -155,7 +155,7 @@
   [fun types args]
   ($ ($ NSCommon) :ccall (name fun) :types (vec types) :args (vec args)))
 
-(defmacro defc
+(defmacro ^{:added "1.6"} defc
   "Defines a c function. Supports variadic functions.
   Takes the function name, the return type and a vector of the arguments types.
   
@@ -175,7 +175,7 @@
       `(defn ~n [& args#] (ccall ~nn (apply conj ~types (types-for-vals (drop (dec (count ~types)) args#))) args#))
       `(defn ~n [& args#] (ccall ~nn ~types args#)))))
 
-(defmacro nsproxy
+(defmacro ^{:added "1.6"} nsproxy
   "nsproxy mocks an object. It's intended to implement protocols/delegators.
 
   (nsproxy
@@ -204,30 +204,30 @@
         i (into {} i)]
     `($ ($ ($ NSProxyImpl) :alloc) :initWithClass ~clazz :map ~i)))
 
-(defc objc_setAssociatedObject :void [:id :pointer :id :int])
+(defc ^{:added "1.6"} objc_setAssociatedObject :void [:id :pointer :id :int])
 
-(defc objc_getAssociatedObject :id [:id :pointer])
+(defc ^{:added "1.6"} objc_getAssociatedObject :id [:id :pointer])
 
 (def objc-keys-map (atom {}))
 
-(defn objc-tag [tag]
+(defn ^{:added "1.6"} objc-tag [tag]
   (if-let [t (tag @objc-keys-map)]
     t
     (let [t ($ (str "__" (name tag) "__") :UTF8String)]
       (swap! objc-keys-map assoc tag t)
       t)))
 
-(defn objc-set!
+(defn ^{:added "1.6"} objc-set!
   "Retains and sets a value into an object."
   [self tag value]
   (objc_setAssociatedObject self (objc-tag tag) value 1)) ; retain assign
 
-(defn objc-get
+(defn ^{:added "1.6"} objc-get
   "Gets a value for a tag set with objc-set!."
   [self tag]
   (objc_getAssociatedObject self (objc-tag tag)))
 
-(defmacro defnstype
+(defmacro ^{:added "1.6"} defnstype
   "nstype creates a new objc class.
  Takes a name, a superclass and a list of methods.
  
@@ -279,6 +279,6 @@
          :superclass ~super
          :map ~i))))
 
-(defn remote-repl
+(defn ^{:added "1.6"} remote-repl
   "Starts a remote repl"
   [] (clojure.lang.RemoteRepl/listen))

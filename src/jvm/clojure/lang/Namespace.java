@@ -74,7 +74,7 @@ public Var intern(Symbol sym){
 	if(v == null)
 		v = new Var(this, sym);
 
-	warnOrFailOnReplace(sym, o, v);
+	//warnOrFailOnReplace(sym, o, v);
 
 
 	while(!mappings.compareAndSet(map, map.assoc(sym, v)))

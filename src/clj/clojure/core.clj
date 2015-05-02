@@ -4984,8 +4984,7 @@
   it were a macro. Cannot be used with variadic (&) args."
   {:added "1.0"}
   [name & decl]
-  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)
-        name (symbol (str (clojure.core/name name) "_inline"))]
+  (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
     `(do
        (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
        (alter-meta! (var ~name) assoc :inline (fn ~name ~args ~expr))
@@ -5883,8 +5882,8 @@
   {:added "1.0"}
   [lib]
   (binding [*compile-files* true
-            *compiler-options* {:elide-meta [:arglists :file :line :column
-                                             :ns :name :added :static :doc]}]
+            #_*compiler-options* #_{:elide-meta [:arglists :file :line :column
+                                                 :ns :name :added :static :doc]}]
     (load-one lib true true))
   lib)
 
@@ -6650,6 +6649,39 @@
               (transient [])
               coll)
       persistent!))
+
+(require '[clojure.java.io :as jio])
+
+(defn- normalize-slurp-opts
+  [opts]
+  (if (string? (first opts))
+    (do
+      (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
+      [:encoding (first opts)])
+    opts))
+
+(defn slurp
+  "Opens a reader on f and reads all its contents, returning a string.
+  See clojure.java.io/reader for a complete list of supported arguments."
+  {:added "1.0"}
+  ([f & opts]
+     (let [opts (normalize-slurp-opts opts)
+           sb (StringBuilder.)]
+       (with-open [^java.io.Reader r (apply jio/reader f opts)]
+         (loop [c (.read r)]
+           (if (neg? c)
+             (str sb)
+             (do
+               (.append sb (char c))
+               (recur (.read r)))))))))
+
+(defn spit
+  "Opposite of slurp.  Opens f with writer, writes content, then
+  closes f. Options passed to clojure.java.io/writer."
+  {:added "1.2"}
+  [f content & options]
+  (with-open [^java.io.Writer w (apply jio/writer f options)]
+    (.write w (str content))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; futures (needs proxy);;;;;;;;;;;;;;;;;;
 (defn future-call
@@ -7480,39 +7512,3 @@
 ;   (throw t)))
 
 (load "core_objc")
-
-(when-not objc?
-  #_(require '[clojure.java.io :as jio])
-
-  (defn- normalize-slurp-opts
-    [opts]
-    (if (string? (first opts))
-      (do
-        (println "WARNING: (slurp f enc) is deprecated, use (slurp f :encoding enc).")
-        [:encoding (first opts)])
-      opts))
-
-  (defn slurp
-    "Opens a reader on f and reads all its contents, returning a string.
-  See clojure.java.io/reader for a complete list of supported arguments."
-    {:added "1.0"}
-    ([f & opts]
-       (load "clojure/java/io")
-       (let [opts (normalize-slurp-opts opts)
-             sb (StringBuilder.)]
-         (with-open [^java.io.Reader r (apply (ns-resolve 'clojure.java.io 'reader) f opts)]
-           (loop [c (.read r)]
-             (if (neg? c)
-               (str sb)
-               (do
-                 (.append sb (char c))
-                 (recur (.read r)))))))))
-
-  (defn spit
-    "Opposite of slurp.  Opens f with writer, writes content, then
-  closes f. Options passed to clojure.java.io/writer."
-    {:added "1.2"}
-    [f content & options]
-    (load "clojure/java/io")
-    (with-open [^java.io.Writer w (apply (ns-resolve 'clojure.java.io 'writer) f options)]
-      (.write w (str content)))))
