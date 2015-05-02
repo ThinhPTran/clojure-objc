@@ -574,7 +574,7 @@ public class Compiler implements Opcodes {
     public String emit(C context, ObjExpr objx, GeneratorAdapter gen) {
       if (emitOnInit) {
         String constant = objx.emitVar(gen, var);
-        // TODO emit sources
+        
         if (shadowsCoreMapping)
         {
           gen.dup();
@@ -584,6 +584,7 @@ public class Compiler implements Opcodes {
           gen.getField(VAR_TYPE, "sym", SYMBOL_TYPE);
           gen.swap();
           gen.invokeVirtual(NS_TYPE, internVar);
+          constant = constant + ".ns.refer(" + constant + ".sym, " + constant + ");";
         }
         if (isDynamic) {
           gen.push(isDynamic);
