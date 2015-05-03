@@ -3,6 +3,7 @@
 (require '[clojure.string :as st])
 (import '[java.io File])
 
+(def j2objc-home (System/getenv "J2OBJC_HOME"))
 (def iphone-os-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk")
 (def iphone-simulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk")
 (def frameworks "-framework UIKit -framework Foundation")
@@ -39,7 +40,7 @@
   (sh+ :silent "clang" "-x" "objective-c" params opts "-isysroot" sdk
        (str "-I" target "/../src/ffi")
        (str "-I" target "/objc")
-       "-I/Users/admin/github/j2objc/dist/include"
+       (str "-I" j2objc-home "/include")
        "-c" (.getCanonicalPath f) "-o" (makeoname (.getPath f))))
 
 (defn build [id params sdk]
@@ -62,7 +63,7 @@
 (sh+ "cp" "-R" "src/objc/." "target/objc")
 (sh+ "cp" "-R" "src/ffi/." "target/objc")
 (sh+ "zip" "-r" "target/objc.jar" "target/gen" "src/jvm" "test/java")
-(sh+ "j2objc" "-d" "target/objc" "--final-methods-as-functions" "--batch-translate-max=300" "-J-Xmx2G" "-classpath" 
+(sh+ (str j2objc-home "/j2objc") "-d" "target/objc" "--final-methods-as-functions" "--batch-translate-max=300" "-J-Xmx2G" "-classpath" 
      "target/classes:target/test-classes" 
      "target/objc.jar")
 
