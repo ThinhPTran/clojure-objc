@@ -45,7 +45,7 @@ public class RemoteRepl {
   }
   
   public native static void connect(String host, String port) /*-[
-    [ReplClient connect:host port:port];
+    [ReplClient connect:host];
   ]-*/;
 
   public static native Object safetry(AFn fn) /*-[

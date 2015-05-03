@@ -965,12 +965,12 @@ static public Object nth(Object coll, int n, Object notFound){
   public static native void loadiOS(String scriptbase) /*-[
     IOSObjectArray *parts = [[scriptbase replaceAll:@"-" withReplacement:@"_"] split:@"/"];
     NSString *classname = @"";
-    for (int n = 0; n < parts.count - 1; n++) {
+    for (int n = 0; n < parts.length - 1; n++) {
       NSString *s = (NSString*)[parts objectAtIndex:n];
       s = [[[s substringToIndex:1] uppercaseString] stringByAppendingString:[s substringFromIndex:1]];
       classname = [classname stringByAppendingString:s];
     }
-    classname = [classname stringByAppendingString:[parts objectAtIndex:parts.count-1]];
+    classname = [classname stringByAppendingString:[parts objectAtIndex:parts.length-1]];
     classname = [classname stringByAppendingString:@"__init"];
     Class c = NSClassFromString(classname);
     if (c == nil) {

@@ -643,11 +643,12 @@ final static class ArrayNode implements INode{
         public boolean hasNext(){
             while(true)
             {
-                if(nestedIter != null)
+                if(nestedIter != null) {
                     if(nestedIter.hasNext())
                         return true;
                     else
                         nestedIter = null;
+                }
 
                 if(i < array.length)
                 {

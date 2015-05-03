@@ -5882,8 +5882,11 @@
   {:added "1.0"}
   [lib]
   (binding [*compile-files* true
-            #_*compiler-options* #_{:elide-meta [:arglists :file :line :column
-                                                 :ns :name :added :static :doc]}]
+            *compiler-options* 
+            {:elide-meta (if (= "true" (System/getenv "KEEP_META"))
+                           []
+                           [:arglists :file :line :column
+                            :ns :name :added :static :doc])}]
     (load-one lib true true))
   lib)
 

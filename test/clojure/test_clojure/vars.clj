@@ -51,12 +51,12 @@
        (with-precision 6 :rounding DOWN        (+ 3.5555555M 1)) 4.55555M
        (with-precision 6 :rounding UNNECESSARY (+ 3.5555M 1))    4.5555M))
 
-(deftest test-settable-math-context
-  (is (=
-       (clojure.main/with-bindings
-         (set! *math-context* (java.math.MathContext. 8))
-         (+ 3.55555555555555M 1))
-       4.5555556M)))
+#_(deftest test-settable-math-context
+   (is (=
+        (clojure.main/with-bindings
+          (set! *math-context* (java.math.MathContext. 8))
+          (+ 3.55555555555555M 1))
+        4.5555556M)))
 
 ; set-validator get-validator
 

@@ -539,7 +539,7 @@ public class Compiler implements Opcodes {
       this.shadowsCoreMapping = shadowsCoreMapping;
       this.initProvided = initProvided;
       this.emitOnInit = (C.RETURN == c || C.EXPRESSION == c)
-          || (!isDeclared && !(init instanceof FnExpr));
+          || !(init instanceof FnExpr);
     }
 
     // private boolean includesExplicitMetadata(MapExpr expr) {

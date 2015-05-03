@@ -1,3 +1,5 @@
+export KEEP_META=false
+mvn package -Dmaven.test.skip=true
 rm -Rf target/release
 mkdir target/release
 cp target/libclojure-objc.a target/release/

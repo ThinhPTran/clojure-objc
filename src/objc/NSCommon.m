@@ -547,7 +547,7 @@ void callWithInvocation(NSInvocation *invocation, id sself, id types, ClojureLan
     args = [fconj invokeWithId:args withId:[WeakRef from:sself]];
     IOSObjectArray *typesa = [ClojureLangRT toArrayWithId:types];
     char retType = to_char([typesa objectAtIndex:0]);
-    long typesc = [typesa count];
+    long typesc = [typesa length];
     for (int n = 1; n < typesc; n++) {
         id val = nil;
         int j = n + 1;
@@ -1064,7 +1064,7 @@ const char* makeSignature(id types) {
     BOOL first = YES;
     NSString *s = @"";
     IOSObjectArray *array = [ClojureLangRT toArrayWithId:types];
-    long c = [array count];
+    long c = [array length];
     for (int n = 0; n < c; n++) {
         s = [s stringByAppendingString:[NSString stringWithFormat:@"%s", encode_type(to_char([array objectAtIndex:n]))]];
         if (first) {
