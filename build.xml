@@ -60,25 +60,16 @@
     	<arg value="clojure.string"/>
     	<arg value="clojure.data"/>
     	<arg value="clojure.remoterepl" />
-    	
     	<arg value="clojure.pprint"/>
     	<arg value="clojure.java.io"/>
-    	<arg value="clojure.test"/>
     	<arg value="clojure.walk"/>
     	<arg value="clojure.zip"/>
     	<arg value="clojure.xml"/>
     	<arg value="clojure.template"/>
-    	<arg value="clojure.stacktrace"/>
+    	<arg value="clojure.test"/>
     	<arg value="clojure.test.tap"/>
-    	<arg value="clojure.reflect" />
-    	<!--arg value="clojure.test.junit"/>
-      <arg value="clojure.inspector"/>
-      <arg value="clojure.main"/>
-      <arg value="clojure.repl"/>
-      <arg value="clojure.java.browse"/>
-      <arg value="clojure.java.javadoc"/>
-      <arg value="clojure.java.shell"/>
-      <arg value="clojure.java.browse-ui"/-->
+    	<!--arg value="clojure.stacktrace"/>
+    	<arg value="clojure.reflect" /-->
     </java>
   </target>
 
@@ -98,7 +89,7 @@
       <arg value="clojure.test-clojure.protocols.examples" />
       <arg value="clojure.test-clojure.genclass.examples" />
     	
-    	<arg value="clojure.test-clojure.agents" />
+    	<!--arg value="clojure.test-clojure.agents" />
     	<arg value="clojure.test-clojure.annotations" />
     	<arg value="clojure.test-clojure.api" />
     	<arg value="clojure.test-clojure.atoms" />
@@ -106,53 +97,25 @@
     	<arg value="clojure.test-clojure.clojure-walk" />
     	<arg value="clojure.test-clojure.clojure-xml" />
     	<arg value="clojure.test-clojure.clojure-zip" />
-    	<arg value="clojure.test-clojure.compilation" />
-    	<arg value="clojure.test-clojure.compilation.examples" />
-    	<arg value="clojure.test-clojure.compilation.line-number-examples" />
     	<arg value="clojure.test-clojure.control" />
     	<arg value="clojure.test-clojure.data" />
     	<arg value="clojure.test-clojure.data-structures" />
-    	<arg value="clojure.test-clojure.def" />
     	<arg value="clojure.test-clojure.delays" />
     	<arg value="clojure.test-clojure.edn" />
     	<arg value="clojure.test-clojure.errors" />
-    	<arg value="clojure.test-clojure.evaluation" />
     	<arg value="clojure.test-clojure.fn" />
     	<arg value="clojure.test-clojure.for" />
-    	<arg value="clojure.test-clojure.genclass" />
-    	<arg value="clojure.test-clojure.genclass.examples" />
     	<arg value="clojure.test-clojure.generators" />
-    	<arg value="clojure.test-clojure.java.io" />
-    	<!--arg value="clojure.test-clojure.java.javadoc" /-->
-    	<!--arg value="clojure.test-clojure.java.shell" /-->
-    	<!--arg value="clojure.test-clojure.java-interop" /-->
     	<arg value="clojure.test-clojure.keywords" />
     	<arg value="clojure.test-clojure.logic" />
     	<arg value="clojure.test-clojure.macros" />
-    	<!--arg value="clojure.test-clojure.main" /-->
-    	<arg value="clojure.test-clojure.metadata" />
     	<arg value="clojure.test-clojure.multimethods" />
-    	<arg value="clojure.test-clojure.ns-libs" />
-    	<arg value="clojure.test-clojure.numbers" />
     	<arg value="clojure.test-clojure.other-functions" />
     	<arg value="clojure.test-clojure.parallel" />
-    	<arg value="clojure.test-clojure.pprint" />
-    	<arg value="clojure.test-clojure.pprint.test-helper" />
-    	<arg value="clojure.test-clojure.predicates" />
     	<arg value="clojure.test-clojure.printer" />
-    	<arg value="clojure.test-clojure.protocols" />
-    	<arg value="clojure.test-clojure.protocols.examples" />
-    	<arg value="clojure.test-clojure.protocols.hash-collisions" />
-    	<arg value="clojure.test-clojure.protocols.more-examples" />
     	<arg value="clojure.test-clojure.reader" />
-    	<arg value="clojure.test-clojure.reducers" />
-    	<!--arg value="clojure.test-clojure.reflect" /-->
     	<arg value="clojure.test-clojure.refs" />
-    	<!--arg value="clojure.test-clojure.repl" /-->
-    	<!--arg value="clojure.test-clojure.repl.example" /-->
-    	<!--arg value="clojure.test-clojure.rt" /-->
     	<arg value="clojure.test-clojure.sequences" />
-    	<arg value="clojure.test-clojure.serialization" />
     	<arg value="clojure.test-clojure.special" />
     	<arg value="clojure.test-clojure.string" />
     	<arg value="clojure.test-clojure.test" />
@@ -160,10 +123,9 @@
     	<arg value="clojure.test-clojure.transducers" />
     	<arg value="clojure.test-clojure.transients" />
     	<arg value="clojure.test-clojure.try-catch" />
-    	<arg value="clojure.test-clojure.vars" />
     	<arg value="clojure.test-clojure.vectors" />
     	<arg value="clojure.test-clojure.volatiles" />
-    	<arg value="clojure.test-helper" />
+    	<arg value="clojure.test-helper" /-->
     </java>
   </target>
 

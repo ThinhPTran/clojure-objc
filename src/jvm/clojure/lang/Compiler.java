@@ -538,8 +538,8 @@ public class Compiler implements Opcodes {
       this.isDynamic = isDynamic;
       this.shadowsCoreMapping = shadowsCoreMapping;
       this.initProvided = initProvided;
-      this.emitOnInit = true;//(C.RETURN == c || C.EXPRESSION == c)
-          //|| !(init instanceof FnExpr);
+      this.emitOnInit = (C.RETURN == c || C.EXPRESSION == c)
+          || !(init instanceof FnExpr);
     }
 
     // private boolean includesExplicitMetadata(MapExpr expr) {

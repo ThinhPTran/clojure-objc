@@ -237,7 +237,7 @@ public Object getMapping(Symbol name) {
   Object val = mappings.get().valAt(name);
   if (val == null && !ObjC.objc) {
     val = Var.maybeLoadFromClass(this.name.toString(), name.toString());
-    if (val == null) {
+    if (val == null && this != RT.CLOJURE_NS) {
       val = searchMapping(name);
       if (val != null && val instanceof Var) {
         refer(name, (Var) val);
