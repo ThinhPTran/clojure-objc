@@ -42,10 +42,10 @@
 
 (defn start-remote-repl []
   (clojure.lang.RemoteRef/reset)
-  (future    
+  (future
     (println "Remote repl listening...")
-    (let [s (.accept server1)
-          s2 (.accept server2)
+    (let [s (.accept @server1)
+          s2 (.accept @server2)
           out (PrintWriter. (.getOutputStream s) true)
           in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))
           out2 (PrintWriter. (.getOutputStream s2) true)
