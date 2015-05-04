@@ -29,7 +29,7 @@
   (let [tag (fn [x] (or (:tag (meta x)) Object))
         psig (fn [[name [& args]]]
                (vector name (vec (map tag args)) (tag name) (map meta args)))
-        cname (with-meta (symbol (str (namespace-munge *ns*) "." name)) (meta name))]
+        cname (with-meta (symbol (str (namespace-munge *ns*) "." (namespace-munge name))) (meta name))]
     `(do
        (gen-interface :name ~cname :methods ~(vec (map psig sigs)))
        (import ~cname))))
@@ -148,7 +148,7 @@
   "Do not use this directly - use defrecord"
   {:added "1.2"}
   [tagname name fields interfaces methods]
-  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." name)) (meta name))
+  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." (namespace-munge name))) (meta name))
         interfaces (vec interfaces)
         interface-set (set (map resolve interfaces))
         methodname-set (set (map first methods))
@@ -362,7 +362,7 @@
 
   [name fields & opts+specs]
   (validate-fields fields name)
-  (let [gname name
+  (let [gname (namespace-munge name)
         [interfaces methods opts] (parse-opts+specs opts+specs)
         ns-part (namespace-munge *ns*)
         classname (symbol (str ns-part "." gname))
@@ -390,7 +390,7 @@
 (defn- emit-deftype*
   "Do not use this directly - use deftype"
   [tagname name fields interfaces methods]
-  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." name)) (meta name))
+  (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." (namespace-munge name))) (meta name))
         interfaces (conj interfaces 'clojure.lang.IType)]
     `(deftype* ~tagname ~classname ~fields
        :implements ~interfaces
@@ -462,7 +462,7 @@
 
   [name fields & opts+specs]
   (validate-fields fields name)
-  (let [gname name
+  (let [gname (namespace-munge name)
         [interfaces methods opts] (parse-opts+specs opts+specs)
         ns-part (namespace-munge *ns*)
         classname (symbol (str ns-part "." gname))
@@ -603,7 +603,7 @@
                      (str "function " (.sym v)))))))))
 
 (defn- emit-protocol [name opts+sigs]
-  (let [iname (symbol (str (munge (namespace-munge *ns*)) "." (munge name)))
+  (let [iname (symbol (str (munge (namespace-munge *ns*)) "." (munge (namespace-munge name))))
         [opts sigs]
         (loop [opts {:on (list 'quote iname) :on-interface iname} sigs opts+sigs]
           (condp #(%1 %2) (first sigs)

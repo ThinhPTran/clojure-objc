@@ -2301,11 +2301,11 @@ static public InputStream resourceAsStream(ClassLoader loader, String name){
   }
   
   static public Class classForName(String name) {
-    return classForName(name, true, baseLoader());
+    return classForName(name.replaceAll("-", "_"), true, baseLoader());
   }
 
   static public Class classForNameNonLoading(String name) {
-    return classForName(name, false, baseLoader());
+    return classForName(name.replaceAll("-", "_"), false, baseLoader());
   }
   
   static public Class loadClassForName(String name){

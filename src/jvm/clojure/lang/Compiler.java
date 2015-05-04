@@ -1211,7 +1211,7 @@ public class Compiler implements Opcodes {
           if (sym.name.indexOf('.') > 0 || sym.name.charAt(0) == '[')
             c = RT.classForName(sym.name);
           else {
-            Object o = currentNS().getMapping(sym);
+            Object o = currentNS().getMapping(Symbol.intern(sym.toString().replaceAll("-", "_")));
             if (o instanceof Class)
               c = (Class) o;
             else if(LOCAL_ENV.deref() != null && ((java.util.Map)LOCAL_ENV.deref()).containsKey(form))
