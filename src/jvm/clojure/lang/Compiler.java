@@ -470,11 +470,11 @@ public class Compiler implements Opcodes {
 
   public static String printClass(Object c) {
     if (c instanceof Class) {
-      return ((Class) c).getCanonicalName().replaceAll("-", "_");
+      return ((Class) c).getCanonicalName();
     } else if (c instanceof Type) {
-      return ((Type) c).getClassName().replaceAll("-", "_");
+      return ((Type) c).getClassName();
     } else if (c instanceof String) {
-      return c.toString().replaceAll("-", "_");
+      return c.toString();
     }
     throw new RuntimeException("printClass doesn't support: "
         + c.getClass().getCanonicalName());
@@ -538,8 +538,8 @@ public class Compiler implements Opcodes {
       this.isDynamic = isDynamic;
       this.shadowsCoreMapping = shadowsCoreMapping;
       this.initProvided = initProvided;
-      this.emitOnInit = (C.RETURN == c || C.EXPRESSION == c)
-          || !(init instanceof FnExpr);
+      this.emitOnInit = true;//(C.RETURN == c || C.EXPRESSION == c)
+          //|| !(init instanceof FnExpr);
     }
 
     // private boolean includesExplicitMetadata(MapExpr expr) {
@@ -585,7 +585,7 @@ public class Compiler implements Opcodes {
           gen.getField(VAR_TYPE, "sym", SYMBOL_TYPE);
           gen.swap();
           gen.invokeVirtual(NS_TYPE, internVar);
-          constant = constant + ".ns.refer(" + constant + ".sym, " + constant + ");";
+          constant = constant + ".ns.refer(" + constant + ".sym, " + constant + ")";
         }
         if (isDynamic) {
           gen.push(isDynamic);
@@ -1419,7 +1419,8 @@ public class Compiler implements Opcodes {
         String value = val.emit(C.EXPRESSION, objx, gen);
         gen.visitLineNumber(line, gen.mark());
         gen.dupX1();
-        emitSource("((" + printClass(targetClass) + ")" + t + ")." + fieldName
+        t = "((" + printClass(targetClass) + ")" + t + ")";
+        emitSource(t + "." + fieldName
             + " = (" + printClass(field.getType()) + ")" + value + ";");
         String v = HostExpr.emitUnboxArg(objx, gen, field.getType(), t + "."
             + fieldName);
@@ -1432,7 +1433,7 @@ public class Compiler implements Opcodes {
         String e = val.emit(C.EXPRESSION, objx, gen);
         gen.visitLineNumber(line, gen.mark());
         gen.invokeStatic(REFLECTOR_TYPE, setInstanceFieldMethod);
-        ret = "Reflector.setInstanceField(" + t + ", " + fieldName + ", " + e + ")";
+        ret = wrap(context, "Reflector.setInstanceField(" + t + ", \"" + fieldName + "\", " + e + ")");
       }
       if (context == C.STATEMENT) {
         gen.pop();
@@ -4694,7 +4695,6 @@ public class Compiler implements Opcodes {
         packageName = "";
         className = internalName;
       }
-      className = className.replaceAll("-", "_");
 
       emitSource("package " + packageName + ";");
       emitSource();
@@ -8133,7 +8133,6 @@ public class Compiler implements Opcodes {
 
   static public void writeSourceFile(String internalName, String source)
       throws IOException {
-    internalName = internalName.replaceAll("-", "_");
     String genPath = (String) Compiler.SOURCE_GEN_PATH.deref();
     if (genPath == null) {
       genPath = "target/gen";

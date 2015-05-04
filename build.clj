@@ -57,13 +57,13 @@
         (sh+ "libtool" "-static" "-syslibroot" sdk "-filelist" 
              "files.LinkFileList" frameworks "-o" "libclojure-objc.a")))))
 
-(sh+ "mvn" "compile" "test-compile")
+;(sh+ "mvn" "compile" "test-compile")
 (sh+ "rm" "-Rf" "target/objc")
 (sh+ "mkdir" "target/objc")
 (sh+ "cp" "-R" "src/objc/." "target/objc")
 (sh+ "cp" "-R" "src/ffi/." "target/objc")
 (sh+ "zip" "-r" "target/objc.jar" "target/gen" "src/jvm" "test/java")
-(sh+ (str j2objc-home "/j2objc") "-d" "target/objc" "--final-methods-as-functions" "--batch-translate-max=300" "-J-Xmx2G" "-classpath" 
+(sh+ (str j2objc-home "/j2objc") "-d" "target/objc" "--final-methods-as-functions" "--batch-translate-max=500" "-J-Xmx2G" "-classpath" 
      "target/classes:target/test-classes" 
      "target/objc.jar")
 
@@ -75,6 +75,7 @@
   (sh "rsync" "-avm" "--delete" "--include" "*.h" "-f" 
        "hide,! */" "." "../include"))
 
+(comment
 (build "iphoneos" "-arch armv7 -arch armv7s -arch arm64" iphone-os-sdk)
 (build "iphonesimulator" "-arch i386 -arch x86_64" iphone-simulator-sdk)
 
@@ -82,3 +83,4 @@
   (when (.exists a)
     (.delete a))
   (sh+ "lipo" "-create" "-output" "target/libclojure-objc.a" "target/iphoneos/libclojure-objc.a" "target/iphonesimulator/libclojure-objc.a"))
+)

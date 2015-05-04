@@ -66,7 +66,6 @@
     	<arg value="clojure.test"/>
     	<arg value="clojure.walk"/>
     	<arg value="clojure.zip"/>
-    	<arg value="clojure.main"/>
     	<arg value="clojure.xml"/>
     	<arg value="clojure.template"/>
     	<arg value="clojure.stacktrace"/>
@@ -74,6 +73,7 @@
     	<arg value="clojure.reflect" />
     	<!--arg value="clojure.test.junit"/>
       <arg value="clojure.inspector"/>
+      <arg value="clojure.main"/>
       <arg value="clojure.repl"/>
       <arg value="clojure.java.browse"/>
       <arg value="clojure.java.javadoc"/>
@@ -104,7 +104,7 @@
     	<arg value="clojure.test-clojure.atoms" />
     	<arg value="clojure.test-clojure.clojure-set" />
     	<arg value="clojure.test-clojure.clojure-walk" />
-    	<!--arg value="clojure.test-clojure.clojure-xml" /-->
+    	<arg value="clojure.test-clojure.clojure-xml" />
     	<arg value="clojure.test-clojure.clojure-zip" />
     	<arg value="clojure.test-clojure.compilation" />
     	<arg value="clojure.test-clojure.compilation.examples" />
@@ -125,7 +125,7 @@
     	<arg value="clojure.test-clojure.java.io" />
     	<!--arg value="clojure.test-clojure.java.javadoc" /-->
     	<!--arg value="clojure.test-clojure.java.shell" /-->
-    	<arg value="clojure.test-clojure.java-interop" />
+    	<!--arg value="clojure.test-clojure.java-interop" /-->
     	<arg value="clojure.test-clojure.keywords" />
     	<arg value="clojure.test-clojure.logic" />
     	<arg value="clojure.test-clojure.macros" />
@@ -148,8 +148,8 @@
     	<arg value="clojure.test-clojure.reducers" />
     	<!--arg value="clojure.test-clojure.reflect" /-->
     	<arg value="clojure.test-clojure.refs" />
-    	<arg value="clojure.test-clojure.repl" />
-    	<arg value="clojure.test-clojure.repl.example" />
+    	<!--arg value="clojure.test-clojure.repl" /-->
+    	<!--arg value="clojure.test-clojure.repl.example" /-->
     	<!--arg value="clojure.test-clojure.rt" /-->
     	<arg value="clojure.test-clojure.sequences" />
     	<arg value="clojure.test-clojure.serialization" />

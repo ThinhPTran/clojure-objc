@@ -16,7 +16,7 @@
 (def public-namespaces
   '[clojure.core
     clojure.pprint
-    clojure.inspector
+    ;clojure.inspector
     clojure.set
     clojure.stacktrace
     clojure.test
@@ -24,9 +24,9 @@
     clojure.xml
     clojure.zip
     clojure.java.io
-    clojure.java.browse
-    clojure.java.javadoc
-    clojure.java.shell
+    ;clojure.java.browse
+    ;clojure.java.javadoc
+    ;clojure.java.shell
     clojure.string
     clojure.data])
 

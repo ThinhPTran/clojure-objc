@@ -25,28 +25,28 @@
   (.primitive
    ^Thing (identity nil)))
 
-(defn instance-field-assign
-  "I throw an exception in an instance field assignment form."
-  []
-  (set!
-   (.field
-    ^Thing (identity nil))
-   (identity nil)))
+#_(defn instance-field-assign
+   "I throw an exception in an instance field assignment form."
+   []
+   (set!
+    (.field
+     ^Thing (identity nil))
+    (identity nil)))
 
-(defn instance-field-assign-reflected
-  "I throw an exception in an instance field assignment form."
-  []
-  (set!
-   (.field
-    (identity nil))
-   (identity nil)))
+#_(defn instance-field-assign-reflected
+   "I throw an exception in an instance field assignment form."
+   []
+   (set!
+    (.field
+     (identity nil))
+    (identity nil)))
 
-(defn static-field-assign
-  "I throw an exception in a static field assignment form."
-  []
-  (set!
-   PersistentHashMap/EMPTY
-   (identity nil)))
+#_(defn static-field-assign
+   "I throw an exception in a static field assignment form."
+   []
+   (set!
+    PersistentHashMap/EMPTY
+    (identity nil)))
 
 (defn instance-method
   "I throw an exception in an instance method form."
