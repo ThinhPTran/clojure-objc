@@ -14,6 +14,7 @@ package clojure.lang;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -205,13 +206,24 @@ public Namespace referNs(Object ns, IPersistentMap filters) {
           Namespace.exclude,
           exclude == null ? RT.set() : PersistentHashSet.create(RT
               .seq(exclude))).assoc(Namespace.only, only)
-      .assoc(Namespace.rename, rename == null ? RT.map() : RT.var("clojure.set", "map-invert").invoke(rename));
+      .assoc(Namespace.rename, rename == null ? RT.map() : invert(rename));
   boolean successful = false;
   while (!successful) {
     IPersistentMap expects = refers.get();
     successful = refers.compareAndSet(expects, expects.assoc(ns, filters));
   }
   return this;
+}
+
+private IPersistentMap invert(Object m) {
+  IPersistentMap r = RT.map();
+  Object s = RT.seq(RT.keys(m));
+  while (s != null) {
+    Object k = RT.first(s);
+    r = r.assoc(RT.get(m, k), k);
+    s = RT.next(s);
+  }
+  return r;
 }
 
 public static Namespace findOrCreate(Symbol name){

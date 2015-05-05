@@ -12,8 +12,6 @@
 
 package clojure.lang;
 
-//*
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,16 +56,6 @@ import clojure.asm.Opcodes;
 import clojure.asm.Type;
 import clojure.asm.commons.GeneratorAdapter;
 import clojure.asm.commons.Method;
-
-//*/
-/*
-
- import org.objectweb.asm.*;
- import org.objectweb.asm.commons.Method;
- import org.objectweb.asm.commons.GeneratorAdapter;
- import org.objectweb.asm.util.TraceClassVisitor;
- import org.objectweb.asm.util.CheckClassAdapter;
- //*/
 
 public class Compiler implements Opcodes {
 
@@ -538,8 +526,7 @@ public class Compiler implements Opcodes {
       this.isDynamic = isDynamic;
       this.shadowsCoreMapping = shadowsCoreMapping;
       this.initProvided = initProvided;
-      this.emitOnInit = (C.RETURN == c || C.EXPRESSION == c)
-          || !(init instanceof FnExpr);
+      this.emitOnInit = C.RETURN == c || C.EXPRESSION == c || !(init instanceof FnExpr);
     }
 
     // private boolean includesExplicitMetadata(MapExpr expr) {
@@ -9571,12 +9558,10 @@ public class Compiler implements Opcodes {
           emitThenForInts(context, r, objx, gen, primExprType, tests.get(i),
               thens.get(i), defaultLabel, emitUnboxed);
         } else if (RT.contains(skipCheck, i) == RT.T) {
-          String e = emitExpr(objx, gen, thens.get(i), emitUnboxed);
+          String e = emitExpr(context, objx, gen, thens.get(i), emitUnboxed);
           if (e != null) {
-            if (thens.get(i) instanceof LiteralExpr && context == C.STATEMENT) {
-              // IGNORE Literals with no assignment
-            } else {
-              emitAssigRet(context, r, wrap(context, e));
+            if (context != C.STATEMENT) {
+              emitAssigRet(context, r, e);
             }
           }
           if (context != C.RETURN) {
@@ -9592,20 +9577,16 @@ public class Compiler implements Opcodes {
       gen.mark(defaultLabel);
       emitSource("default:");
       tab();
-      String e = emitExpr(objx, gen, defaultExpr, emitUnboxed);
+      String e = emitExpr(context, objx, gen, defaultExpr, emitUnboxed);
       if (e != null) {
-        if (defaultExpr instanceof LiteralExpr && context == C.STATEMENT) {
-          // IGNORE Literals with no assignment
-        } else {
-          emitAssigRet(context, r, wrap(context, e));
+        if (context != C.STATEMENT) {
+          emitAssigRet(context, r, e);
         }
       }
       untab();
       untab();
       emitSource("}");
       gen.mark(endLabel);
-      if (context == C.STATEMENT)
-        gen.pop();
       return context == C.EXPRESSION ? r : "";
     }
 
@@ -9662,12 +9643,10 @@ public class Compiler implements Opcodes {
         gen.ifZCmp(GeneratorAdapter.EQ, defaultLabel);
         emitSource("if (Util.equiv(" + val + ", " + tval + ")) {");
         tab();
-        String body = emitExpr(objx, gen, then, emitUnboxed);
+        String body = emitExpr(context, objx, gen, then, emitUnboxed);
         if (body != null) {
-          if (then instanceof LiteralExpr && context == C.STATEMENT) {
-            // IGNORE
-          } else {
-            emitAssigRet(context, r, wrap(context, body));
+          if (context != C.STATEMENT) {
+            emitAssigRet(context, r, body);
           }
         }
         if (context != C.RETURN) {
@@ -9681,12 +9660,10 @@ public class Compiler implements Opcodes {
         gen.ifCmp(Type.LONG_TYPE, GeneratorAdapter.NE, defaultLabel);
         emitSource("if (" + val + " == " + tval + ") {");
         tab();
-        String body = emitExpr(objx, gen, then, emitUnboxed);
+        String body = emitExpr(context, objx, gen, then, emitUnboxed);
         if (body != null) {
-          if (then instanceof LiteralExpr && context == C.STATEMENT) {
-            // IGNORE
-          } else {
-            emitAssigRet(context, r, wrap(context, body));
+          if (context != C.STATEMENT) {
+            emitAssigRet(context, r, body);
           }
         }
         if (context != C.RETURN) {
@@ -9709,13 +9686,11 @@ public class Compiler implements Opcodes {
         tab();
 
         // else direct match
-        String body = emitExpr(objx, gen, then, emitUnboxed);
+        String body = emitExpr(context, objx, gen, then, emitUnboxed);
 
         if (body != null) {
-          if (then instanceof LiteralExpr && context == C.STATEMENT) {
-            // IGNORE
-          } else {
-            emitAssigRet(context, r, wrap(context, body));
+          if (context != C.STATEMENT) {
+            emitAssigRet(context, r, body);
           }
         }
         if (context != C.RETURN) {
@@ -9748,12 +9723,10 @@ public class Compiler implements Opcodes {
         gen.ifZCmp(GeneratorAdapter.EQ, defaultLabel);
       }
       tab();
-      String e = emitExpr(objx, gen, then, emitUnboxed);
+      String e = emitExpr(context, objx, gen, then, emitUnboxed);
       if (e != null) {
-        if (then instanceof LiteralExpr && context == C.STATEMENT) {
-          // IGNORE
-        } else {
-          emitAssigRet(context, r, wrap(context, e));
+        if (context != C.STATEMENT) {
+          emitAssigRet(context, r, e);
         }
       }
       if (context != C.RETURN) {
@@ -9763,12 +9736,12 @@ public class Compiler implements Opcodes {
       emitSource("}");
     }
 
-    private static String emitExpr(ObjExpr objx, GeneratorAdapter gen,
+    private static String emitExpr(C context, ObjExpr objx, GeneratorAdapter gen,
         Expr expr, boolean emitUnboxed) {
       if (emitUnboxed && expr instanceof MaybePrimitiveExpr)
-        return ((MaybePrimitiveExpr) expr).emitUnboxed(C.EXPRESSION, objx, gen);
+        return ((MaybePrimitiveExpr) expr).emitUnboxed(context, objx, gen);
       else
-        return expr.emit(C.EXPRESSION, objx, gen);
+        return expr.emit(context, objx, gen);
     }
 
     static class Parser implements IParser {

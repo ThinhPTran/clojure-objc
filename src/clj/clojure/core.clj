@@ -6437,7 +6437,6 @@
                          (into1 #{} (map #(shift-mask shift mask %) skip-check)))]
         [shift mask case-map switch-type skip-check]))))
 
-(comment
 (defmacro case
   "Takes an expression, and a set of clauses.
 
@@ -6499,11 +6498,10 @@
           :identity
           (let [[shift mask imap switch-type skip-check] (prep-hashes ge default tests thens)]
             `(let [~ge ~e] (case* ~ge ~shift ~mask ~default ~imap ~switch-type :hash-identity ~skip-check))))))))
-)
 
 ;TODO case: in objc hash != java's hashCode
-(defmacro case [e & clauses]
-  `(condp = ~e ~@clauses))
+#_(defmacro case [e & clauses]
+   `(condp = ~e ~@clauses))
 
 ;; redefine reduce with internal-reduce
 
