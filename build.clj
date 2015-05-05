@@ -75,7 +75,6 @@
   (sh "rsync" "-avm" "--delete" "--include" "*.h" "-f" 
        "hide,! */" "." "../include"))
 
-(comment
 (build "iphoneos" "-arch armv7 -arch armv7s -arch arm64" iphone-os-sdk)
 (build "iphonesimulator" "-arch i386 -arch x86_64" iphone-simulator-sdk)
 
@@ -83,4 +82,3 @@
   (when (.exists a)
     (.delete a))
   (sh+ "lipo" "-create" "-output" "target/libclojure-objc.a" "target/iphoneos/libclojure-objc.a" "target/iphonesimulator/libclojure-objc.a"))
-)

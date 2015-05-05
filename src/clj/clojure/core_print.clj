@@ -111,7 +111,9 @@
   	  (.write w "]"))))
 
 (defn- print-object [o, ^Writer w]
-  (print-tagged-object o (str o) w))
+  (if clojure.lang.RemoteRepl/connected
+    (.write w (str "#remote-ref \"" (clojure.lang.RemoteRef/register o) "\""))
+    (print-tagged-object o (str o) w)))
 
 (defmethod print-method Object [o, ^Writer w]
   (print-object o w))
