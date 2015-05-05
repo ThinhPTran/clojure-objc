@@ -13,7 +13,7 @@
 (def socket2 (atom nil))
 
 (defn socket-println [s d]
-  (let [c (str (count d))]
+  (let [c (str (count (.getBytes d "UTF-8")))]
     (.println s 
       (str 
         (apply str (for [n (range (- 10 (count c)))] " ")) 
