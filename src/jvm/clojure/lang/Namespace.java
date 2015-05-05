@@ -205,7 +205,7 @@ public Namespace referNs(Object ns, IPersistentMap filters) {
           Namespace.exclude,
           exclude == null ? RT.set() : PersistentHashSet.create(RT
               .seq(exclude))).assoc(Namespace.only, only)
-      .assoc(Namespace.rename, rename == null ? RT.map() : rename);
+      .assoc(Namespace.rename, rename == null ? RT.map() : RT.var("clojure.set", "map-invert").invoke(rename));
   boolean successful = false;
   while (!successful) {
     IPersistentMap expects = refers.get();
