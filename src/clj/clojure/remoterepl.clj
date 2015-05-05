@@ -12,17 +12,25 @@
 (def socket1 (atom nil))
 (def socket2 (atom nil))
 
+(defn socket-println [s d]
+  (let [c (str (count d))]
+    (.println s 
+      (str 
+        (apply str (for [n (range (- 10 (count c)))] " ")) 
+        c))
+    (.println s d)))
+
 (defn process-msg [out f]
   (let [[run-in-main id f args] f]
     (->> [id (binding [force-main-thread true]
                (apply f args))]
          pr-str 
-         (.println out))))
+         (socket-println out))))
 
 (defn call-remote [sel args]
   (let [args (vec args)
         id (keyword (uuid))]
-    (.println (:out @socket)
+    (socket-println (:out @socket)
               (pr-str [(or (= (Thread/currentThread) @repl-main-thread) force-main-thread)
                        id sel args]))
     (loop [msg (read (:in @socket))]
@@ -33,7 +41,7 @@
             (if (= rid id)
               r
               (do
-                (.println (:out @socket) (pr-str [:retry id]))
+                (socket-println (:out @socket) (pr-str [:retry id]))
                                         ; retries until the sender gets the response
                 (recur (read (:in @socket))))))
           (do

@@ -18,13 +18,11 @@
 
 @implementation NSSocketImpl {
     Cst502ClientSocket* cs;
-    char * buf;
 }
 
 - (id) initWithHost:(NSString*)hostName withPort:(NSString*)portNum {
     self = [super init];
     if (self) {
-        buf = malloc(4096);
         cs = [[Cst502ClientSocket alloc] initWithHost: hostName
                                            portNumber: portNum];
         [self reconnect];
@@ -41,11 +39,18 @@
 
 - (id) read {
     fflush (stdout);
-    id a = [cs receiveBytes: buf maxBytes:MAXDATASIZE beginAt:0];
-    if ([@"" isEqualToString:a]) {
-        [self reconnect];
-        return [self read];
-    }
+    char *buf = malloc(12);
+    NSString *a = [[cs receiveBytes:buf maxBytes:12 beginAt:0] stringByTrimmingCharactersInSet:
+                   [NSCharacterSet whitespaceCharacterSet]];
+    /*if ([@"" isEqualToString:a]) {
+     [self reconnect];
+     return [self read];
+     }*/
+    int size = [a intValue] + 2;
+    free(buf);
+    buf = malloc(size);
+    a = [cs receiveBytes:buf maxBytes:size beginAt:0];
+    free(buf);
     return a;
 }
 

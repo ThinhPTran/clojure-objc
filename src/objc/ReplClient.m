@@ -35,10 +35,6 @@ static ClojureLangAtom *responses;
         id args = [ClojureLangRT thirdWithId:msg];
         id r = [(ClojureLangAFn*)s applyToWithClojureLangISeq:[ClojureLangRT seqWithId:args]];
         [responses swapWithClojureLangIFn:Clojurecore_assoc_get_VAR_() withId:i withId:r];
-/*        dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-            [NSThread sleepForTimeInterval:2.0f];
-            [responses swapWithClojureLangIFn:Clojurecore_dissoc_get_VAR_() withId:i];
-        });*/
         [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:r]]];
     }
     @catch (NSException *exception) {
