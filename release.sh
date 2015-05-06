@@ -12,4 +12,5 @@ mkdir target/release/lib
 cp $J2OBJC_HOME/lib/j2objc_annotations.jar target/release/lib
 cp $J2OBJC_HOME/lib/j2objc.jar target/release/lib
 cp $J2OBJC_HOME/lib/jre_emul.jar target/release/lib
-zip -r target/release.zip target/release/
+cd ./target/release
+zip -r ../release.zip .
