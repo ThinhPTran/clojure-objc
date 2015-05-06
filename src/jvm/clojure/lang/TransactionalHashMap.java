@@ -28,7 +28,7 @@ final int binFor(Object k){
 	h ^= (h >>> 20) ^ (h >>> 12);
 	h ^= (h >>> 7) ^ (h >>> 4);
 	return h % bins.length;
-//	return k.hashCode() % bins.length;
+//	return Util.hash(k) % bins.length;
 }
 
 Entry entryAt(Object k){

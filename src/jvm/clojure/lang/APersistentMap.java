@@ -312,7 +312,7 @@ public Set entrySet(){
 		}
 
 		public int hashCode(){
-			return APersistentMap.this.hashCode();
+			return Util.hash(APersistentMap.this);
 		}
 
 		public boolean contains(Object o){

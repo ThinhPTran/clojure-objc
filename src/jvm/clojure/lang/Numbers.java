@@ -1054,11 +1054,11 @@ static int hasheq(Number x){
 		// stripTrailingZeros() does not do anything to values
 		// equal to 0 with different scales.
 		if (isZero(x))
-			return BigDecimal.ZERO.hashCode();
+			return Util.hash(BigDecimal.ZERO);
 		else
 			{
 			BigDecimal tmp = ((BigDecimal) x).stripTrailingZeros();
-			return tmp.hashCode();
+			return Util.hash(tmp);
 			}
 		}
 	return Util.hash(x);

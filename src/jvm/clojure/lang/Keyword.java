@@ -80,7 +80,7 @@ public static Keyword find(String nsname){
 }
 
 public final int hashCode(){
-	return sym.hashCode() + 0x9e3779b9;
+	return Util.hash(sym) + 0x9e3779b9;
 }
 
 public int hasheq() {

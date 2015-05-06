@@ -80,7 +80,7 @@ public boolean equals(Object o) {
 }
 
 public int hashCode(){
-	return Util.hashCombine(name.hashCode(), Util.hash(ns));
+	return Util.hashCombine(Util.hash(name), Util.hash(ns));
 }
 
 public int hasheq() {

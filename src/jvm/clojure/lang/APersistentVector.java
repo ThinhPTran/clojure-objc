@@ -43,7 +43,7 @@ static boolean doEquals(IPersistentVector v, Object obj){
 	if(obj instanceof List || obj instanceof IPersistentVector)
 		{
 		Collection ma = (Collection) obj;
-		if(ma.size() != v.count() || ma.hashCode() != v.hashCode())
+		if(ma.size() != v.count() || Util.hash(ma) != Util.hash(v))
 			return false;
 		for(Iterator i1 = ((List) v).iterator(), i2 = ma.iterator();
 		    i1.hasNext();)
@@ -56,7 +56,7 @@ static boolean doEquals(IPersistentVector v, Object obj){
 //	if(obj instanceof IPersistentVector)
 //		{
 //		IPersistentVector ma = (IPersistentVector) obj;
-//		if(ma.count() != v.count() || ma.hashCode() != v.hashCode())
+//		if(ma.count() != v.count() || Util.hash(ma) != Util.hash(v))
 //			return false;
 //		for(int i = 0; i < v.count(); i++)
 //			{
@@ -99,7 +99,7 @@ static boolean doEquiv(IPersistentVector v, Object obj){
 //	if(obj instanceof IPersistentVector)
 //		{
 //		IPersistentVector ma = (IPersistentVector) obj;
-//		if(ma.count() != v.count() || ma.hashCode() != v.hashCode())
+//		if(ma.count() != v.count() || Util.hash(ma) != Util.hash(v))
 //			return false;
 //		for(int i = 0; i < v.count(); i++)
 //			{

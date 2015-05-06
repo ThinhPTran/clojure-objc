@@ -28,13 +28,13 @@ final public static BigInt ONE = new BigInt(1,null);
 public int hashCode(){
 	if(bipart == null)
 		return (int) (this.lpart ^ (this.lpart >>> 32));
-	return bipart.hashCode();
+	return Util.hash(bipart);
 }
 
 public int hasheq(){
 	if(bipart == null)
 		return Murmur3.hashLong(lpart);
-	return bipart.hashCode();
+	return Util.hash(bipart);
 
 }
 

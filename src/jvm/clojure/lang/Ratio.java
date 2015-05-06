@@ -33,7 +33,7 @@ public boolean equals(Object arg0){
 }
 
 public int hashCode(){
-	return numerator.hashCode() ^ denominator.hashCode();
+	return Util.hash(numerator) ^ Util.hash(denominator);
 }
 
 public String toString(){
