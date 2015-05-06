@@ -8,7 +8,7 @@ A Clojure compiler that targets objc runtimes.
  
 ## Dependency
 
-![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)
+[![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)](http://clojars.org/galdolber/clojure-objc)
 
 ## Goals
 
