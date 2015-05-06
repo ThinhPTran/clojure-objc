@@ -7,6 +7,10 @@ A clojure compiler that targets objc runtimes.
 ## Leiningen plugin
  
  https://github.com/galdolber/lein-objcbuild
+ 
+## Dependency
+
+![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)
 
 ## Goals
 
@@ -26,12 +30,14 @@ A clojure compiler that targets objc runtimes.
 ## ObjC interop
 
     (defn say-hi [name]
-        ($ ($ ($ ($ UIAlertView) :alloc)
-             :initWithTitle (str "Hello " name)
+      (-> ($ UIAlertView)
+          ($ :alloc)
+          ($ :initWithTitle (str "Hello " name)
              :message "Hi! from clojure"
              :delegate nil
              :cancelButtonTitle "Cancelar"
-             :otherButtonTitles nil) :show))
+             :otherButtonTitles nil)
+          ($ :show)))
  
 ## Presentations
 
