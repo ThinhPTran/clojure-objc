@@ -13,3 +13,5 @@ xcode
 .idea/
 
 settings.xml
+
+upload-github.sh
