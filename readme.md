@@ -1,8 +1,6 @@
 # clojure-objc
 
-WARNING! THIS IS AN ALPHA RELEASE
-
-A clojure compiler that targets objc runtimes.
+A Clojure compiler that targets objc runtimes.
 
 ## Leiningen plugin
  
