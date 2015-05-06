@@ -186,21 +186,28 @@ static public int compare(Object k1, Object k2){
 static public int hash(Object o){
 	if(o == null)
 		return 0;
+	if (ObjC.objc && o instanceof String) {
+	  return stringHash((String) o);
+	}
 	return o.hashCode();
 }
+
+private native static int stringHash(String s) /*-[
+  return javaStringHashCode(s);
+]-*/;
 
 public static int hasheq(Object o){
 	if(o == null)
 		return 0;
 	if (ObjC.objc && skipCollection(o))
-	  return o.hashCode();
+	  return hash(o);
 	else if(o instanceof IHashEq)
 		return dohasheq((IHashEq) o);	
 	if(o instanceof Number)
 		return Numbers.hasheq((Number)o);
 	if(o instanceof String)
-		return Murmur3.hashInt(o.hashCode());
-	return o.hashCode();
+		return Murmur3.hashInt(hash(o));
+	return hash(o);
 }
 
 private static int dohasheq(IHashEq o) {

@@ -24,7 +24,7 @@ IPersistentMap mapAt(int bin){
 
 final int binFor(Object k){
 	//spread hashes, a la Cliff Click
-	int h = k.hashCode();
+	int h = Util.hash(k);
 	h ^= (h >>> 20) ^ (h >>> 12);
 	h ^= (h >>> 7) ^ (h >>> 4);
 	return h % bins.length;

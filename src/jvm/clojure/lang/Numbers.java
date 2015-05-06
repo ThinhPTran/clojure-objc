@@ -1061,7 +1061,7 @@ static int hasheq(Number x){
 			return tmp.hashCode();
 			}
 		}
-	return x.hashCode();
+	return Util.hash(x);
 }
 
 static Category category(Object x){

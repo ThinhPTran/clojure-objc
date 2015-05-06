@@ -141,7 +141,7 @@ public int hashCode(){
 		while(i.hasNext())
 			{
 			Object obj = i.next();
-			hash = 31 * hash + (obj == null ? 0 : obj.hashCode());
+			hash = 31 * hash + (obj == null ? 0 : Util.hash(obj));
 			}
 //		int hash = 0;
 //		for(int i = 0; i < count(); i++)

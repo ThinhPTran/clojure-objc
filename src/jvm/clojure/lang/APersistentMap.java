@@ -105,8 +105,8 @@ static public int mapHash(IPersistentMap m){
 	for(ISeq s = m.seq(); s != null; s = s.next())
 		{
 		Map.Entry e = (Map.Entry) s.first();
-		hash += (e.getKey() == null ? 0 : e.getKey().hashCode()) ^
-				(e.getValue() == null ? 0 : e.getValue().hashCode());
+		hash += (e.getKey() == null ? 0 : Util.hash(e.getKey())) ^
+				(e.getValue() == null ? 0 : Util.hash(e.getValue()));
 		}
 	return hash;
 }

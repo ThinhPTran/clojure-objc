@@ -75,7 +75,7 @@ public int hashCode(){
 		int hash = 1;
 		for(ISeq s = seq(); s != null; s = s.next())
 			{
-			hash = 31 * hash + (s.first() == null ? 0 : s.first().hashCode());
+			hash = 31 * hash + (s.first() == null ? 0 : Util.hash(s.first()));
 			}
 		this._hash = hash;
 		}

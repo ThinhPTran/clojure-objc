@@ -6499,10 +6499,6 @@
           (let [[shift mask imap switch-type skip-check] (prep-hashes ge default tests thens)]
             `(let [~ge ~e] (case* ~ge ~shift ~mask ~default ~imap ~switch-type :hash-identity ~skip-check))))))))
 
-;TODO case: in objc hash != java's hashCode
-#_(defmacro case [e & clauses]
-   `(condp = ~e ~@clauses))
-
 ;; redefine reduce with internal-reduce
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; helper files ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
