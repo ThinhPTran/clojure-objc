@@ -11,3 +11,5 @@ coclojure/*
 .project
 xcode
 .idea/
+
+settings.xml
