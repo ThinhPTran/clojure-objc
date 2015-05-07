@@ -41,6 +41,8 @@ A Clojure compiler that targets objc runtimes.
 
 http://www.slideshare.net/GalDolber/clojureobjc-47500127
  
+![alt usage guide](https://github.com/galdolber/clojure-objc-sample/raw/master/ios.gif)
+ 
 ## Discuss
  
  https://groups.google.com/d/forum/clojure-objc-discuss
