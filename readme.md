@@ -55,8 +55,9 @@ A Clojure compiler that targets objc runtimes.
 
     ;; proxy objc class
     (nsproxy
-      ([:bool :textFieldShouldReturn :id field]
-        ($ field :resignFirstResponder) true))
+      ([^:bool self :textFieldShouldReturn ^:id field]
+        ($ field :resignFirstResponder) 
+        true))
       
 ## Presentations
 
