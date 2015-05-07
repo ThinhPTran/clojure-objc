@@ -37,6 +37,7 @@ A Clojure compiler that targets objc runtimes.
              :delegate nil
              :cancelButtonTitle "Cancelar"
              :otherButtonTitles nil)
+          ($ :autorelease)
           ($ :show)))
  
 ## Presentations
