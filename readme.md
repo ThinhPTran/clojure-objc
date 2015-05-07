@@ -28,7 +28,8 @@ A Clojure compiler that targets objc runtimes.
  All generated code manage memory automagically, but if you alloc with interop you need to release!
  
 ## ObjC interop
-
+    
+    ;; calling objc methods
     (defn say-hi [name]
       (-> ($ UIAlertView)
           ($ :alloc)
@@ -40,6 +41,23 @@ A Clojure compiler that targets objc runtimes.
           ($ :autorelease)
           ($ :show)))
  
+    ;; extend objc class
+    (defnstype UIKitController UIViewController
+      ([^:id self :initWith ^:id [view s]]
+         (doto ($$ self :init)
+           ($ :setView ($ view :retain))
+           (objc-set! :scope s)
+           (#(post-notification ($ % :view) :init)))))
+           
+    ;; c interop
+    (defc NSLog :void [:id &]) ; & for variadic
+    (NSLog "%@ %@ %d" "Hello" "World" 13)
+
+    ;; proxy objc class
+    (nsproxy
+      ([:bool :textFieldShouldReturn :id field]
+        ($ field :resignFirstResponder) true))
+      
 ## Presentations
 
 http://www.slideshare.net/GalDolber/clojureobjc-47500127
