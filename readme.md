@@ -2,6 +2,8 @@
 
 A Clojure compiler that targets objc runtimes.
 
+![alt usage guide](https://github.com/galdolber/clojure-objc-sample/raw/master/ios.gif)
+
 ## Leiningen plugin
  
  https://github.com/galdolber/lein-objcbuild
@@ -40,8 +42,6 @@ A Clojure compiler that targets objc runtimes.
 ## Presentations
 
 http://www.slideshare.net/GalDolber/clojureobjc-47500127
- 
-![alt usage guide](https://github.com/galdolber/clojure-objc-sample/raw/master/ios.gif)
  
 ## Discuss
  
