@@ -74,9 +74,9 @@ http://www.slideshare.net/GalDolber/clojureobjc-47500127
 ## License
 
 Portions of this project derived from Clojure:
-Copyright © 2006-2014 Rich Hickey
+Copyright © 2006-2015 Rich Hickey
 
 Original code and Clojure modifications:
-Copyright © 2014 Gal Dolber
+Copyright © 2014-2015 Gal Dolber
 
 Both are distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
