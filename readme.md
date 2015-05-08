@@ -2,6 +2,15 @@
 
 A Clojure compiler that targets objc runtimes.
 
+ * Write iOS and MacOS apps in Clojure
+ * Future proof: shares 99.99% of the code base with clojure-jvm
+ * Distribute clojure-objc libs using maven
+ * Most existing Clojure libs should just work
+ * ObjC interop
+ * C interop
+ * ObjC subclassing
+ * REPL!
+
 ![alt usage guide](https://github.com/galdolber/clojure-objc-sample/raw/master/ios.gif)
 
 ## Leiningen plugin
@@ -11,17 +20,6 @@ A Clojure compiler that targets objc runtimes.
 ## Dependency
 
 [![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)](http://clojars.org/galdolber/clojure-objc)
-
-## Goals
-
- * Write iOS and MacOS apps in clojure
- * Future proof: share 99.99% of the code base with clojure-jvm
- * Distribute clojure-objc libs using maven
- * Existing clojure libs should 'just work'
- * Dynamic objc interop
- * Dynamic c interop
- * Dynamic objc subclassing
- * REPL
  
 ## Memory management
  
