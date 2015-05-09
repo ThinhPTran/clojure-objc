@@ -18,6 +18,9 @@ public class RemoteRepl {
       if (ObjC.objc) {
         return callRemoteSelNative(o, RT.seq(seq));
       } else {
+        if (o == null) {
+          throw new NullPointerException();
+        }
         return callRemoteSel.invoke(o, RT.seq(seq));
       }
     } else {

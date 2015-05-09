@@ -14,6 +14,9 @@ public class Selector extends RestFn implements Named {
     if (!ObjC.objc) {
       return RemoteRepl.callRemote(new Selector(sel), RT.cons(o, args));
     } else {
+      if (o == null) {
+        throw new NullPointerException();
+      }
       if (args != null && !sel.endsWith(":")) {
         sel = sel + ":";
       }
