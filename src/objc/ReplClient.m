@@ -38,8 +38,8 @@ static ClojureLangAtom *responses;
         [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[Clojurecore_vector_get_VAR_() invokeWithId:i withId:r]]];
     }
     @catch (NSException *exception) {
-        [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[exception callStackSymbols]]];
-        NSLog(@"%@ %@", exception, [exception callStackSymbols]);
+        [socket println:[Clojurecore_pr_str_get_VAR_() invokeWithId:[NSString stringWithFormat:@"%@",exception]]];
+        NSLog(@"%@", exception);
     }
 }
 
