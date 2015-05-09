@@ -50,19 +50,17 @@
 
 (defn start-remote-repl []
   (clojure.lang.RemoteRef/reset)
-  (future
-    (println "Remote repl listening...")
-    (let [s (.accept @server1)
-          s2 (.accept @server2)
-          out (PrintWriter. (.getOutputStream s) true)
-          in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))
-          out2 (PrintWriter. (.getOutputStream s2) true)
-          in2 (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s2)))]
-      (clojure.lang.RemoteRepl/setConnected true)
-      (reset! socket {:out out :in in})
-      (reset! socket1 {:out out :in in})      
-      (reset! socket2 {:out out2 :in in2})
-      (println "Client has connected!")
+  (let [s (.accept @server1)
+        s2 (.accept @server2)
+        out (PrintWriter. (.getOutputStream s) true)
+        in (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s)))
+        out2 (PrintWriter. (.getOutputStream s2) true)
+        in2 (LineNumberingPushbackReader. (InputStreamReader. (.getInputStream s2)))]
+    (clojure.lang.RemoteRepl/setConnected true)
+    (reset! socket {:out out :in in})
+    (reset! socket1 {:out out :in in})      
+    (reset! socket2 {:out out2 :in in2})
+    (future
       (try
         (loop [f (read in2)]
           (let [s @socket]
@@ -71,11 +69,14 @@
             (reset! socket s))
           (recur (read in2)))
         (catch Exception e
-          (println "DISCONNECT " e)
+          (println "REPL DISCONNECTED")
           (.printStackTrace e)
           (.close s)
           (.close s2)
           (start-remote-repl))))))
+
+(defn connected? []
+  clojure.lang.RemoteRepl/connected)
 
 (defn listen []
   (reset! repl-main-thread (Thread/currentThread))
