@@ -4987,7 +4987,7 @@
   (let [[pre-args [args expr]] (split-with (comp not vector?) decl)]
     `(do
        (defn ~name ~@pre-args ~args ~(apply (eval (list `fn args expr)) args))
-       (alter-meta! (var ~name) assoc :inline (fn ~name ~args ~expr))
+       (alter-meta! (var ~name) assoc :inline (fn ~args ~expr))
        (var ~name))))
 
 (defn empty
