@@ -983,51 +983,45 @@ static public Object nth(Object coll, int n, Object notFound){
     return;
   ]-*/;
 
-  static public void load(String scriptbase, boolean failIfNotFound)
-      throws IOException, ClassNotFoundException {
+  static public void load(String scriptbase, boolean failIfNotFound) throws IOException, ClassNotFoundException{
     if (ObjC.objc) {
       loadiOS(scriptbase);
     } else {
       String classfile = scriptbase + LOADER_SUFFIX + ".class";
       String cljfile = scriptbase + ".clj";
       String scriptfile = cljfile;
-      URL classURL = getResource(baseLoader(), classfile);
+      URL classURL = getResource(baseLoader(),classfile);
       URL cljURL = getResource(baseLoader(), scriptfile);
       if(cljURL == null) {
         scriptfile = scriptbase + ".cljc";
         cljURL = getResource(baseLoader(), scriptfile);
-      }  
+      }
       boolean loaded = false;
-
-      if (forceClass
-          || (classURL != null && (cljURL == null || lastModified(classURL,
-              classfile) >= lastModified(cljURL, scriptfile)))) { // || classURL ==
-                                                               // null ?
+  
+      if((classURL != null &&
+          (cljURL == null
+           || lastModified(classURL, classfile) > lastModified(cljURL, scriptfile)))
+         || classURL == null) {
         try {
-          Var.pushThreadBindings(RT.mapUniqueKeys(CURRENT_NS,
-              CURRENT_NS.deref(), WARN_ON_REFLECTION,
-              WARN_ON_REFLECTION.deref(), RT.UNCHECKED_MATH,
-              RT.UNCHECKED_MATH.deref()));
-          // System.out.println("Loading class " + classURL);
-          loaded = (loadClassForName(scriptbase.replace('/', '.')
-              + LOADER_SUFFIX) != null);
-        } catch (Exception e) {
-          throw new RuntimeException("Error loading class " + classURL, e);
-        } finally {
+          Var.pushThreadBindings(
+              RT.mapUniqueKeys(CURRENT_NS, CURRENT_NS.deref(),
+                     WARN_ON_REFLECTION, WARN_ON_REFLECTION.deref()
+                  ,RT.UNCHECKED_MATH, RT.UNCHECKED_MATH.deref()));
+          loaded = (loadClassForName(scriptbase.replace('/', '.') + LOADER_SUFFIX) != null);
+        }
+        finally {
           Var.popThreadBindings();
         }
       }
-      // boolean runtime = Boolean.TRUE.equals(Compiler.RUNTIME.deref());
-      // runtime ||
-      if ((!loaded && cljURL != null)) {
-        // System.out.println("Loading script " + scriptbase);
-        if (booleanCast(Compiler.COMPILE_FILES.deref()))
+      if(!loaded && cljURL != null) {
+        if(booleanCast(Compiler.COMPILE_FILES.deref()))
           compile(scriptfile);
         else
           loadResourceScript(RT.class, scriptfile);
-      } else if (!loaded && failIfNotFound)
+      }
+      else if(!loaded && failIfNotFound)
         throw new FileNotFoundException(String.format("Could not locate %s or %s on classpath.%s", classfile, cljfile,
-                scriptbase.contains("_") ? " Please check that namespaces with dashes use underscores in the Clojure file name." : ""));
+          scriptbase.contains("_") ? " Please check that namespaces with dashes use underscores in the Clojure file name." : ""));
     }
   }
 

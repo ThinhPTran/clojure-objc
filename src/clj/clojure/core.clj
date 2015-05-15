@@ -6647,7 +6647,7 @@
               coll)
       persistent!))
 
-(require '[clojure.java.io :as jio])
+(load "java/io")
 
 (defn- normalize-slurp-opts
   [opts]
@@ -6664,7 +6664,7 @@
   ([f & opts]
      (let [opts (normalize-slurp-opts opts)
            sb (StringBuilder.)]
-       (with-open [^java.io.Reader r (apply jio/reader f opts)]
+       (with-open [^java.io.Reader r (apply clojure.java.io/reader f opts)]
          (loop [c (.read r)]
            (if (neg? c)
              (str sb)
@@ -6677,7 +6677,7 @@
   closes f. Options passed to clojure.java.io/writer."
   {:added "1.2"}
   [f content & options]
-  (with-open [^java.io.Writer w (apply jio/writer f options)]
+  (with-open [^java.io.Writer w (apply clojure.java.io/writer f options)]
     (.write w (str content))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; futures (needs proxy);;;;;;;;;;;;;;;;;;
