@@ -192,11 +192,19 @@ static public Object read(PushbackReader r, boolean eofIsError, Object eofValue,
 
 static public Object read(PushbackReader r, boolean eofIsError, Object eofValue, boolean isRecursive, Object opts)
 {
-	return read(r, eofIsError, eofValue, null, null, isRecursive, opts, new LinkedList());
+	// start with pendingForms null as reader conditional splicing is not allowed at top level
+	return read(r, eofIsError, eofValue, null, null, isRecursive, opts, null);
 }
 
 static private Object read(PushbackReader r, boolean eofIsError, Object eofValue, boolean isRecursive, Object opts, Object pendingForms) {
-	return read(r, eofIsError, eofValue, null, null, isRecursive, opts, pendingForms);
+	return read(r, eofIsError, eofValue, null, null, isRecursive, opts, ensurePending(pendingForms));
+}
+
+static private Object ensurePending(Object pendingForms) {
+	if(pendingForms == null)
+		return new LinkedList();
+	else
+		return pendingForms;
 }
 
 static private Object installPlatformFeature(Object opts) {
@@ -605,7 +613,7 @@ public static class CommentReader extends AFn{
 public static class DiscardReader extends AFn{
 	public Object invoke(Object reader, Object underscore, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		read(r, true, null, true, opts, pendingForms);
+		read(r, true, null, true, opts, ensurePending(pendingForms));
 		return r;
 	}
 }
@@ -619,7 +627,7 @@ public static class WrappingReader extends AFn{
 
 	public Object invoke(Object reader, Object quote, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		Object o = read(r, true, null, true, opts, pendingForms);
+		Object o = read(r, true, null, true, opts, ensurePending(pendingForms));
 		return RT.list(sym, o);
 	}
 
@@ -639,7 +647,7 @@ public static class DeprecatedWrappingReader extends AFn{
 		                   " is deprecated; use " + sym.getName() +
 		                   " instead");
 		PushbackReader r = (PushbackReader) reader;
-		Object o = read(r, true, null, true, opts, pendingForms);
+		Object o = read(r, true, null, true, opts, ensurePending(pendingForms));
 		return RT.list(sym, o);
 	}
 
@@ -648,7 +656,7 @@ public static class DeprecatedWrappingReader extends AFn{
 public static class VarReader extends AFn{
 	public Object invoke(Object reader, Object quote, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		Object o = read(r, true, null, true, opts, pendingForms);
+		Object o = read(r, true, null, true, opts, ensurePending(pendingForms));
 //		if(o instanceof Symbol)
 //			{
 //			Object v = Compiler.maybeResolveIn(Compiler.currentNS(), (Symbol) o);
@@ -693,6 +701,7 @@ public static class DispatchReader extends AFn{
 		// Try the ctor reader first
 		if(fn == null) {
 		unread((PushbackReader) reader, ch);
+		pendingForms = ensurePending(pendingForms);
 		Object result = ctorReader.invoke(reader, ch, opts, pendingForms);
 
 		if(result != null)
@@ -718,7 +727,7 @@ public static class FnReader extends AFn{
 			Var.pushThreadBindings(
 					RT.map(ARG_ENV, PersistentTreeMap.EMPTY));
 			unread(r, '(');
-			Object form = read(r, true, null, true, opts, pendingForms);
+			Object form = read(r, true, null, true, opts, ensurePending(pendingForms));
 
 			PersistentVector args = PersistentVector.EMPTY;
 			PersistentTreeMap argsyms = (PersistentTreeMap) ARG_ENV.deref();
@@ -781,7 +790,7 @@ static class ArgReader extends AFn{
 			{
 			return registerArg(1);
 			}
-		Object n = read(r, true, null, true, opts, pendingForms);
+		Object n = read(r, true, null, true, opts, ensurePending(pendingForms));
 		if(n.equals(Compiler._AMP_))
 			return registerArg(-1);
 		if(!(n instanceof Number))
@@ -800,6 +809,7 @@ public static class MetaReader extends AFn{
 			line = ((LineNumberingPushbackReader) r).getLineNumber();
 			column = ((LineNumberingPushbackReader) r).getColumnNumber()-1;
 			}
+		pendingForms = ensurePending(pendingForms);
 		Object meta = read(r, true, null, true, opts, pendingForms);
 		if(meta instanceof Symbol || meta instanceof String)
 			meta = RT.map(RT.TAG_KEY, meta);
@@ -841,7 +851,7 @@ public static class SyntaxQuoteReader extends AFn{
 			Var.pushThreadBindings(
 					RT.map(GENSYM_ENV, PersistentHashMap.EMPTY));
 
-			Object form = read(r, true, null, true, opts, pendingForms);
+			Object form = read(r, true, null, true, opts, ensurePending(pendingForms));
 			return syntaxQuote(form);
 			}
 		finally
@@ -988,6 +998,7 @@ static class UnquoteReader extends AFn{
 		int ch = read1(r);
 		if(ch == -1)
 			throw Util.runtimeException("EOF while reading character");
+		pendingForms = ensurePending(pendingForms);
 		if(ch == '@')
 			{
 			Object o = read(r, true, null, true, opts, pendingForms);
@@ -1056,7 +1067,7 @@ public static class ListReader extends AFn{
 			line = ((LineNumberingPushbackReader) r).getLineNumber();
 			column = ((LineNumberingPushbackReader) r).getColumnNumber()-1;
 			}
-		List list = readDelimitedList(')', r, true, opts, pendingForms);
+		List list = readDelimitedList(')', r, true, opts, ensurePending(pendingForms));
 		if(list.isEmpty())
 			return PersistentList.EMPTY;
 		IObj s = (IObj) PersistentList.create(list);
@@ -1111,7 +1122,7 @@ public static class EvalReader extends AFn{
 			}
 
 		PushbackReader r = (PushbackReader) reader;
-		Object o = read(r, true, null, true, opts, pendingForms);
+		Object o = read(r, true, null, true, opts, ensurePending(pendingForms));
 		if(o instanceof Symbol)
 			{
 			return RT.classForName(o.toString());
@@ -1157,7 +1168,7 @@ public static class EvalReader extends AFn{
 public static class VectorReader extends AFn{
 	public Object invoke(Object reader, Object leftparen, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		return LazilyPersistentVector.create(readDelimitedList(']', r, true, opts, pendingForms));
+		return LazilyPersistentVector.create(readDelimitedList(']', r, true, opts, ensurePending(pendingForms)));
 	}
 
 }
@@ -1165,7 +1176,7 @@ public static class VectorReader extends AFn{
 public static class MapReader extends AFn{
 	public Object invoke(Object reader, Object leftparen, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		Object[] a = readDelimitedList('}', r, true, opts, pendingForms).toArray();
+		Object[] a = readDelimitedList('}', r, true, opts, ensurePending(pendingForms)).toArray();
 		if((a.length & 1) == 1)
 			throw Util.runtimeException("Map literal must contain an even number of forms");
 		return RT.map(a);
@@ -1176,7 +1187,7 @@ public static class MapReader extends AFn{
 public static class SetReader extends AFn{
 	public Object invoke(Object reader, Object leftbracket, Object opts, Object pendingForms) {
 		PushbackReader r = (PushbackReader) reader;
-		return PersistentHashSet.createWithCheck(readDelimitedList('}', r, true, opts, pendingForms));
+		return PersistentHashSet.createWithCheck(readDelimitedList('}', r, true, opts, ensurePending(pendingForms)));
 	}
 
 }
@@ -1225,6 +1236,7 @@ public static List readDelimitedList(char delim, PushbackReader r, boolean isRec
 public static class CtorReader extends AFn{
 	public Object invoke(Object reader, Object firstChar, Object opts, Object pendingForms){
 		PushbackReader r = (PushbackReader) reader;
+		pendingForms = ensurePending(pendingForms);
 		Object name = read(r, true, null, false, opts, pendingForms);
 		if (!(name instanceof Symbol))
 			throw new RuntimeException("Reader tag must be a symbol");
@@ -1341,6 +1353,8 @@ public static class ConditionalReader extends AFn {
 	public static Object readCondDelimited(PushbackReader r, boolean splicing, Object opts, Object pendingForms) {
 		Object result = null;
 		Object form; // The most recently ready form
+		boolean toplevel = (pendingForms == null);
+		pendingForms = ensurePending(pendingForms);
 
 		final int firstline =
 				(r instanceof LineNumberingPushbackReader) ?
@@ -1412,6 +1426,9 @@ public static class ConditionalReader extends AFn {
 			if(! (result instanceof List))
 				throw Util.runtimeException("Spliced form list in read-cond-splicing must implement java.util.List");
 
+			if(toplevel)
+				throw Util.runtimeException("Reader conditional splicing not allowed at the top level.");
+
 			((List)pendingForms).addAll(0, (List)result);
 
 			return r;
@@ -1456,7 +1473,7 @@ public static class ConditionalReader extends AFn {
 
 			if (isPreserveReadCond(opts)) {
 				IFn listReader = getMacro(ch); // should always be a list
-				Object form = listReader.invoke(r, ch, opts, pendingForms);
+				Object form = listReader.invoke(r, ch, opts, ensurePending(pendingForms));
 
 				return ReaderConditional.create(form, splicing);
 			} else {
