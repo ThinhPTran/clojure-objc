@@ -1003,7 +1003,7 @@ static public Object nth(Object coll, int n, Object notFound){
          || classURL == null) {
         try {
           Var.pushThreadBindings(
-              RT.mapUniqueKeys(CURRENT_NS, CURRENT_NS.deref(),
+              RT.mapUniqueKeys(CURRENT_NS, CURRENT_NS.deref(), Compiler.NEXT_ID, new Atom(1),
                      WARN_ON_REFLECTION, WARN_ON_REFLECTION.deref()
                   ,RT.UNCHECKED_MATH, RT.UNCHECKED_MATH.deref()));
           loaded = (loadClassForName(scriptbase.replace('/', '.') + LOADER_SUFFIX) != null);

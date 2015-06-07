@@ -256,6 +256,8 @@ public class Compiler implements Opcodes {
 
   // DynamicClassLoader
   static final public Var LOADER = Var.create().setDynamic();
+  
+  static final public Var NEXT_ID = Var.create(new Atom(1)).setDynamic();
 
   // String
   static final public Var SOURCE = Var.intern(
@@ -322,6 +324,13 @@ public class Compiler implements Opcodes {
       source = source.replaceAll(COMPILE_STUB_PREFIX + ".", ""); // TODO ?
       sc.println(source);
     }
+  }
+  
+  public static int nextScopedID() {
+    Atom n = (Atom) NEXT_ID.deref();
+    Integer i = (Integer) n.deref();
+    n.reset(i+1);
+    return i;
   }
 
   public static void emitSource() {
@@ -4336,9 +4345,9 @@ public class Compiler implements Opcodes {
       if (RT.second(form) instanceof Symbol)
         name = ((Symbol) RT.second(form)).name;
       String simpleName = name != null ? (munge(name).replace(".", "_DOT_") + (enclosingMethod != null ? "__"
-          + RT.nextID()
+          + nextScopedID()
           : ""))
-          : ("fn" + "__" + RT.nextID());
+          : ("fn" + "__" + nextScopedID());
       
       /*Fix CLJ-1330
          String basename = (enclosingMethod != null ?
@@ -4374,7 +4383,7 @@ public class Compiler implements Opcodes {
             KEYWORDS, PersistentHashMap.EMPTY, VARS, PersistentHashMap.EMPTY,
             KEYWORD_CALLSITES, PersistentVector.EMPTY, PROTOCOL_CALLSITES,
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
-            NO_RECUR, null));
+            NO_RECUR, null, Compiler.NEXT_ID, new Atom(1)));
 
         // arglist might be preceded by symbol naming this fn
         if (RT.second(form) instanceof Symbol) {
@@ -8530,7 +8539,7 @@ public class Compiler implements Opcodes {
             KEYWORDS, PersistentHashMap.EMPTY, VARS, PersistentHashMap.EMPTY,
             KEYWORD_CALLSITES, PersistentVector.EMPTY, PROTOCOL_CALLSITES,
             PersistentVector.EMPTY, VAR_CALLSITES, emptyVarCallSites(),
-            NO_RECUR, null));
+            NO_RECUR, null, Compiler.NEXT_ID, new Atom(1)));
         if (ret.isDeftype()) {
           Var.pushThreadBindings(RT.mapUniqueKeys(METHOD, null, LOCAL_ENV,
               ret.fields, COMPILE_STUB_SYM, Symbol.intern(null, tagName),
