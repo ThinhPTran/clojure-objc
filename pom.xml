@@ -6,7 +6,7 @@
 	<artifactId>clojure-objc</artifactId>
 	<name>clojure-objc</name>
 	<packaging>jar</packaging>
-	<version>1.7.0-beta3</version>
+	<version>1.7.0-RC1</version>
 	
 	<distributionManagement>
     <repository>

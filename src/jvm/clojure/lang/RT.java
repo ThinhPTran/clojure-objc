@@ -978,7 +978,6 @@ static public Object nth(Object coll, int n, Object notFound){
       NSLog(@"Error loading %@", scriptbase);
     } else {
       [c description]; // Force initialize
-      NSLog(@"Loaded %@", scriptbase);
     }
     return;
   ]-*/;
