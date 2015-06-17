@@ -2,8 +2,9 @@
 
 A Clojure compiler that targets objc runtimes.
 
- * Write iOS and MacOS apps in Clojure
- * Future proof: shares 99.99% of the code base with clojure-jvm
+ * Write native apps in Clojure
+ * Strong iOS support
+ * Future proof: shares 99.99% of the code base with clojure for the jvm
  * Distribute clojure-objc libs using maven
  * Most existing Clojure libs should just work
  * ObjC interop
