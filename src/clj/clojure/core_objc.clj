@@ -170,10 +170,10 @@
   (let [nn (name n)
         variadic? (= '& (last types))
         types (if variadic? (drop-last types) types)
-        types (vec (map objc-types (cons r types)))]
+        types (vec (cons r types))]
     (if variadic?
-      `(defn ~n [& args#] (ccall ~nn (apply conj ~types (types-for-vals (drop (dec (count ~types)) args#))) args#))
-      `(defn ~n [& args#] (ccall ~nn ~types args#)))))
+      `(defn ~n [& args#] (ccall ~nn (apply conj (mapv objc-types ~types) (types-for-vals (drop (dec (count ~types)) args#))) args#))
+      `(defn ~n [& args#] (ccall ~nn (mapv objc-types ~types) args#)))))
 
 (defmacro ^{:added "1.6"} nsproxy
   "nsproxy mocks an object. It's intended to implement protocols/delegators.
